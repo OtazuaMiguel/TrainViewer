@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '*/10 * * * *'   # refresca la copia de datos de Renfe (GitHub puede retrasar estas ejecuciones)
+    - cron: '*/10 * * * *'    # refresca la copia de datos de Renfe (GitHub puede retrasar estas ejecuciones)
   workflow_dispatch:
 
 permissions:
