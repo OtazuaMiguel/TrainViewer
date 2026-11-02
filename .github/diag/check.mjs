@@ -38,6 +38,11 @@ for (const [name, vp] of [['escritorio', { width: 1440, height: 900 }], ['movil'
     log.push(`[${name}] FOCO ${await p.$eval('#map', e => e.classList.contains('focus'))}`); log.push(`[${name}] FICHA ${(await p.$eval('#trainv', e => e.innerText)).replace(/\n+/g, ' | ').slice(0, 500)}`);
     await p.screenshot({ path: `diag/${name}-tren.png` }); await p.keyboard.press('Escape'); await p.waitForTimeout(400); }
   await p.screenshot({ path: `diag/${name}.png` });
+  for (const q of ['00808', 'Pamplona Madrid', 'A Coruña Madrid']) {
+    await p.fill('#q', q); await p.waitForTimeout(700);
+    log.push(`[${name}] BUSQUEDA "${q}": ${(await p.$eval('#results', e => e.innerText.replace(/\n+/g, ' · '))).slice(0, 400)}`);
+  }
+  await p.fill('#q', ''); await p.waitForTimeout(200);
   // Panel de estación: busca Madrid y abre su panel
   await p.fill('#q', 'Atocha'); await p.waitForTimeout(400); await p.keyboard.press('Enter'); await p.waitForTimeout(2500);
   log.push(`[${name}] ESTACION ${(await p.$eval('#station', e => e.innerText)).replace(/\n+/g, ' | ').slice(0, 700)}`);
