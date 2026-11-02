@@ -6,42 +6,21 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Fuentes de incidencias
+      - name: Páginas de Adif
         run: |
-          for u in \
-            "https://www.adif.es/estado-de-la-red" \
-            "https://www.adif.es/viajeros/estado-de-la-red" \
-            "https://www.adif.es/w/estado-de-la-red" \
-            "https://gtfsrt.renfe.com/alerts.json" \
-            "https://gtfsrt.renfe.com/trip_updates_LD.json" \
-            "https://gtfsrt.renfe.com/trip_updates.json" \
-            "https://data.renfe.com/api/3/action/package_search?q=alertas&rows=20" \
-            "https://data.renfe.com/api/3/action/package_search?q=tiempo%20real&rows=20" ; do
+          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
+          for u in "https://www.adif.es/viajeros/estado-de-la-red" "https://www.adif.es/viajeros/avisos"; do
             echo "=================== $u"
-            curl -sSL -m 30 -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36" -o /tmp/r -w 'HTTP %{http_code} %{content_type} %{size_download} bytes final=%{url_effective}\n' "$u" || true
+            curl -sSL -m 30 -A "$UA" -o /tmp/r "$u"
             python3 - <<'PY'
           import re,html
           b=open('/tmp/r','rb').read().decode('utf8','replace')
-          if '<html' in b[:3000].lower():
-              t=re.sub(r'<script.*?</script>|<style.*?</style>','',b,flags=re.S|re.I)
-              t=html.unescape(re.sub(r'<[^>]+>','\n',t)); t=re.sub(r'\n\s*\n+','\n',t)
-              print(t[:3000])
-          else:
-              print(b[:2500])
+          # bloques con incidencias: busca palabras clave y muestra HTML alrededor (clases y estructura)
+          for m in list(re.finditer(r'(?i)(interrumpid|restablec|incidencia|afecta|cortad|suspendid|limitaci)', b))[:12]:
+              s=max(0,m.start()-500); print('--- HTML @',m.start()); print(re.sub(r'\s+',' ',b[s:m.start()+600])); print()
+          t=re.sub(r'<script.*?</script>|<style.*?</style>','',b,flags=re.S|re.I)
+          t=html.unescape(re.sub(r'<[^>]+>','\n',t)); t=re.sub(r'[ \t]+',' ',t); t=re.sub(r'\n\s*\n+','\n',t)
+          i=t.find('Periodos hast'); i = i if i>0 else 0
+          print('=== TEXTO (tras el menú)'); print(t[i:i+6000])
           PY
           done
-      - name: Estructura de los recorridos de Renfe
-        run: |
-          curl -sS -m 40 -o /tmp/rt.json https://tiempo-real.largorecorrido.renfe.com/renfe-visor/trenesConEstacionesLD.json
-          python3 - <<'PY'
-          import json
-          d=json.load(open('/tmp/rt.json')); ts=d['trenes']
-          t=ts[0]; print('claves tren:', list(t.keys()))
-          for k,v in t.items():
-              if isinstance(v,list): print(k, 'len', len(v), 'ejemplo', json.dumps(v[:3])[:400])
-          lens=[len(x.get('secuencia',[])) for x in ts]; print('secuencia longitudes min/med/max', min(lens), sorted(lens)[len(lens)//2], max(lens))
-          # trenes Madrid–Sevilla (60000 -> 51003) y Toledo (92102)
-          def has(x,c): return any(s.get('p')==c for s in x.get('estaciones',[]))
-          print('trenes que paran en Toledo 92102:', sum(has(x,'92102') for x in ts))
-          print('trenes que paran en Ciudad Real 37200:', sum(has(x,'37200') for x in ts), ' Puertollano 37700:', sum(has(x,'37700') for x in ts), ' Córdoba 50500:', sum(has(x,'50500') for x in ts), ' Sevilla 51003:', sum(has(x,'51003') for x in ts))
-          PY
