@@ -34,11 +34,25 @@ jobs:
         run: |
           mkdir -p prev
           if git fetch -q --depth=1 origin datos; then
-            for f in historico.json incidencias.json; do git show "origin/datos:$f" > "prev/$f" 2>/dev/null || rm -f "prev/$f"; done
+            for f in historico.json incidencias.json horarios.json; do git show "origin/datos:$f" > "prev/$f" 2>/dev/null || rm -f "prev/$f"; done
           else
             echo "Todavía no hay rama datos"
           fi
           ls -la prev
+
+      - name: Horario oficial de Renfe (una vez al día)
+        run: |
+          mkdir -p out
+          HOY=$(TZ=Europe/Madrid date +%F)
+          if [ -f prev/horarios.json ] && node -e "process.exit(JSON.parse(require('fs').readFileSync('prev/horarios.json','utf8')).today==='$HOY'?0:1)"; then
+            cp prev/horarios.json out/horarios.json; echo "El horario de hoy ya estaba generado"
+          elif curl -fsSL --retry 3 --retry-all-errors -m 180 -A "Mozilla/5.0" -o gtfs.zip https://ssl.renfe.com/gtransit/Fichero_AV_LD/google_transit.zip \
+               && mkdir -p gtfs && unzip -q -o gtfs.zip -d gtfs && node scripts/horarios.mjs gtfs out/horarios.json; then
+            echo "Horario generado"
+          else
+            echo "::warning::No se pudo generar el horario; se conserva el anterior"
+            [ -f prev/horarios.json ] && cp prev/horarios.json out/horarios.json || true
+          fi
 
       - name: Recoger
         run: node scripts/datos.mjs out prev
