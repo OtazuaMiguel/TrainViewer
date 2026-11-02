@@ -51,6 +51,15 @@ El flujo `.github/workflows/datos.yml` se ejecuta cada ~15 min:
 - Las pruebas con textos reales de Adif están en `scripts/test/incidencias.test.mjs` (`node scripts/test/incidencias.test.mjs`).
 - Los ficheros se publican en la rama `datos`, que siempre tiene un único commit. La web los lee desde `raw.githubusercontent.com`.
 
+### Horario oficial
+
+Renfe solo publica en tiempo real los trenes que ya circulan. Para ver también los que van a salir, el flujo `datos` descarga una vez al día el horario oficial de Renfe (GTFS de Alta Velocidad, Larga y Media Distancia) y `scripts/horarios.mjs` lo convierte en `horarios.json`, con los trenes de ayer, hoy y mañana. La web lo cruza con el tiempo real por número de tren:
+
+- **Paneles de estación y búsqueda de viajes** con todos los trenes: *en circulación* (con su retraso), *programado*, *sin datos en directo* (debería circular, pero no tiene posición) o *afectado por corte*.
+- **Afectado por corte**: el horario oficial a veces mantiene trenes que no pueden circular. Si el recorrido de un tren atraviesa un tramo cortado según Adif, se muestra en gris.
+- **Todas las estaciones** del catálogo se pueden buscar por su nombre (Atocha, Chamartín, Sants, Santa Justa…). Las que tienen servicio aparecen en el mapa al acercarse.
+- Cercanías no está incluido: su horario oficial ocupa unos 290 MB.
+
 ### Al segundo
 
 Renfe publica una actualización nueva cada **~15 s**; ese es el límite de la fuente. La app:

@@ -24,6 +24,7 @@
   --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
 html,body{height:100%}
 body{background:var(--bg);color:var(--text);font:13px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   display:grid;grid-template-columns:384px 1fr;height:100vh;height:100dvh;overflow:hidden;-webkit-font-smoothing:antialiased}
@@ -368,7 +369,9 @@ body:not(.mode-sim) .sim-only{display:none!important}
 .wk-l{fill:var(--muted);font:500 8.5px Inter,sans-serif;text-anchor:middle}
 .wk-v{font:600 9px var(--mono);text-anchor:middle}
 .wk-v.ok{fill:#4ade80} .wk-v.warn{fill:#facc15} .wk-v.crit{fill:#f87171} .wk-v.na{fill:var(--dim)}
-.k-plan{font-style:normal;color:var(--info)} .k-nolive{font-style:normal;color:var(--dim)} .k-live{font-style:normal;color:var(--ok)}
+.k-plan{font-style:normal;color:var(--info)} .k-cut{font-style:normal;color:#f87171}
+.brow.is-cut .cd,.brow.is-cut .who b{opacity:.55}
+.brow.is-cut .tm .pill{text-decoration:line-through} .k-nolive{font-style:normal;color:var(--dim)} .k-live{font-style:normal;color:var(--ok)}
 #results em{margin-left:6px;font-size:11px}
 @keyframes live{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}70%{box-shadow:0 0 0 7px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
 @keyframes blink{50%{opacity:.3}}
@@ -1866,11 +1869,58 @@ function liveOfTrip(trip) {
   const now = Date.now();
   return trip.stops[0].dep - 3 * 3600e3 <= now && now <= trip.stops[trip.stops.length - 1].arr + 4 * 3600e3 ? t : null;
 }
-// Estado de un viaje: en circulación (con su retraso), programado o sin posición en directo
+// ¿Atraviesa el viaje un tramo cortado según Adif? (el horario oficial no siempre quita esos trenes)
+const cutIdx = {key:null, map:new Map()}, affCache = new Map();
+function cutIntervals() {
+  if (cutIdx.key === official.updated) return cutIdx.map;
+  cutIdx.key = official.updated; cutIdx.map = new Map(); affCache.clear();
+  for (const o of official.overlays) {
+    if (o.sev !== 'cut' || !o.coords || o.coords.length < 2) continue;
+    const e = EDGES.find(x => x.id === o.edge); if (!e) continue;
+    const a = nearestOn([e], o.coords[0]), b = nearestOn([e], o.coords[o.coords.length - 1]);
+    (cutIdx.map.get(e.id) || cutIdx.map.set(e.id, []).get(e.id)).push([Math.min(a.s, b.s), Math.max(a.s, b.s), o.item]);
+  }
+  return cutIdx.map;
+}
+function cutOverlap(e, s0, s1) {
+  const iv = cutIntervals().get(e.id); if (!iv) return null;
+  const a = Math.min(s0, s1), b = Math.max(s0, s1);
+  for (const [x, y, item] of iv) if (Math.min(b, y) - Math.max(a, x) > 800) return item;
+  return null;
+}
+function hubNear(c) { let best = null, bd = 12000; for (const st of STATIONS.values()) { if (!st.net || st.junction) continue; const d = hav(c, st.c); if (d < bd) { bd = d; best = st; } } return best; }
+function hubPath(o, d) {      // camino más corto por la red entre dos ciudades (por longitud)
+  const dist = {[o]:0}, prev = {}, done = new Set();
+  for (;;) {
+    let u = null, best = Infinity; for (const k in dist) if (!done.has(k) && dist[k] < best) { best = dist[k]; u = k; }
+    if (u === null) return null; if (u === d) break; done.add(u);
+    for (const {e, to} of ADJ[u]) { const nd = best + e.len; if (nd < (dist[to] ?? Infinity)) { dist[to] = nd; prev[to] = {u, e}; } }
+  }
+  const out = []; for (let k = d; k !== o; k = prev[k].u) out.push(prev[k].e); return out;
+}
+function tripAffected(trip) {
+  if (!official.overlays.length) return null;
+  cutIntervals();
+  if (affCache.has(trip.id)) return affCache.get(trip.id);
+  let hit = null;
+  for (let i = 0; i < trip.stops.length - 1 && !hit; i++) {
+    const A = stationCoord(trip.stops[i].code), B = stationCoord(trip.stops[i + 1].code); if (!A || !B) continue;
+    const sa = nearestOn(EDGES, A), sb = nearestOn(EDGES, B);
+    if (sa && sb && sa.d < 3000 && sb.d < 3000 && sa.e === sb.e) { hit = cutOverlap(sa.e, sa.s, sb.s); continue; }
+    const ha = hubNear(A), hb = hubNear(B);
+    if (!ha || !hb || ha === hb) continue;
+    for (const e of hubPath(ha.id, hb.id) || []) { const iv = cutIntervals().get(e.id); if (iv && iv.reduce((m, [x, y]) => m + (y - x), 0) / e.len >= 0.3) { hit = iv[0][2]; break; } }
+  }
+  affCache.set(trip.id, hit);
+  return hit;
+}
+// Estado de un viaje: en circulación (con su retraso), programado, afectado por un corte o sin posición en directo
 function tripState(trip) {
   const t = state.mode === 'live' ? liveOfTrip(trip) : null, now = Date.now();
   const first = trip.stops[0], last = trip.stops[trip.stops.length - 1];
   if (t) { const j = trip.stops.findIndex(s => s.code === t.next); return {t, delay:t.delay, nextIdx:j, kind:'live'}; }
+  const cut = now <= last.arr + 15 * 60000 ? tripAffected(trip) : null;
+  if (cut) return {t:null, delay:0, nextIdx:-1, kind:'cut', item:cut};
   if (now < first.dep) return {t:null, delay:0, nextIdx:0, kind:'plan'};
   if (now <= last.arr + 15 * 60000) return {t:null, delay:0, nextIdx:-1, kind:'nolive'};
   return {t:null, delay:0, nextIdx:trip.stops.length, kind:'done'};
@@ -1913,9 +1963,11 @@ function plannedTrain(trip) {
 function stationCoord(code) { const c = norm(code); const s = CODE2ST.get(c) || ONE.get(c); if (s) return s.c; const k = CAT.get(c) || null; if (k) return k.c; const g = sched.stops[c]; return g ? [g[1], g[2]] : null; }
 function planView(p) {
   const tr = p.plan, ts = tripState(tr), first = tr.stops[0], last = tr.stops[tr.stops.length - 1];
-  const status = ts.kind === 'nolive' ? 'Sin posición en directo (puede ir con retraso o estar cancelado)' : `Programado · sale de ${exactName(first.code)} a las ${fmtHM(first.dep)}`;
+  const cutIt = ts.kind === 'cut' ? official.items.find(i => i.id === ts.item) : null;
+  const status = ts.kind === 'cut' ? `Afectado por corte: ${cutIt ? cutIt.title : 'tramo interrumpido según Adif'}. Probablemente no circula o va por otro recorrido.`
+    : ts.kind === 'nolive' ? 'Sin posición en directo (puede ir con retraso o estar cancelado)' : `Programado · sale de ${exactName(first.code)} a las ${fmtHM(first.dep)}`;
   return {from:exactName(first.code), to:exactName(last.code), pct:0, speed:null, approx:false, delay:0, next:exactName(first.code), nextTime:first.dep,
-          code:ts.kind === 'nolive' ? 'warn' : 'dwell', status, stops:[], foot:'Horario oficial de Renfe'};
+          code:ts.kind === 'cut' ? 'held' : ts.kind === 'nolive' ? 'warn' : 'dwell', status, stops:[], foot:'Horario oficial de Renfe'};
 }
 
 /* =====================================================================
@@ -1958,10 +2010,10 @@ function boardRows(list, kind) {
   const now = nowMs();
   return list.map((x, i) => {
     const cd = fmtCountdown(x.est - now);
-    return `<button class="brow" data-i="${kind}:${i}">
+    return `<button class="brow${x.kind === 'cut' ? ' is-cut' : ''}" data-i="${kind}:${i}">
       <div class="cd${cd.now ? ' now' : ''}">${cd.v}<small>${cd.u || '&nbsp;'}</small></div>
-      <div class="who"><b>${kind === 'arr' ? 'De ' : 'A '}${esc(x.other)}</b><span><i style="background:${CAT_COLOR[x.cat]}"></i>${esc(x.label)} ${esc(x.number)}${x.kind === 'plan' ? ' · <em class="k-plan">programado</em>' : x.kind === 'nolive' ? ' · <em class="k-nolive">sin datos en directo</em>' : x.kind === 'live' ? ' · <em class="k-live">en circulación</em>' : ''}</span></div>
-      <div class="tm">${x.delay > 0 ? `<s>${fmtHM(x.sched)}</s>` : ''}<span class="pill ${x.kind === 'nolive' ? 'plan' : delayClass(x.delay)}">${fmtHM(x.est)}${x.delay > 0 ? ' +' + x.delay : ''}</span></div>
+      <div class="who"><b>${kind === 'arr' ? 'De ' : 'A '}${esc(x.other)}</b><span><i style="background:${CAT_COLOR[x.cat]}"></i>${esc(x.label)} ${esc(x.number)}${x.kind === 'plan' ? ' · <em class="k-plan">programado</em>' : x.kind === 'nolive' ? ' · <em class="k-nolive">sin datos en directo</em>' : x.kind === 'live' ? ' · <em class="k-live">en circulación</em>' : x.kind === 'cut' ? ' · <em class="k-cut">afectado por corte</em>' : ''}</span></div>
+      <div class="tm">${x.delay > 0 ? `<s>${fmtHM(x.sched)}</s>` : ''}<span class="pill ${x.kind === 'nolive' || x.kind === 'cut' ? 'plan' : delayClass(x.delay)}">${fmtHM(x.est)}${x.delay > 0 ? ' +' + x.delay : ''}</span></div>
     </button>`;
   }).join('');
 }
@@ -2063,7 +2115,9 @@ $('tq').oninput = renderTrainList; $('tsort').onchange = renderTrainList;
 
 // Búsqueda global: estaciones, trenes y viajes («Madrid Sevilla», «Madrid → Barcelona»)
 const qEl = $('q'), resEl = $('results'); let results = [], hl = 0;
-const fold = s => s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').trim();
+const fold = s => s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/[.\-\/,]+/g, ' ').replace(/\s+/g, ' ').trim();
+// Coincide si todas las palabras buscadas aparecen en el nombre («madrid atocha», «atocha madrid»)
+const nameHas = (name, q) => { const n = fold(name); return fold(q).split(' ').every(w => n.includes(w)); };
 function matchStation(q) {
   const f = fold(q); if (f.length < 3) return null;
   const all = [...STATIONS.values()].filter(s => !s.junction);
@@ -2071,15 +2125,16 @@ function matchStation(q) {
       || all.filter(s => fold(s.name).includes(f)).sort((a, b) => (b.major - a.major) || (b.net - a.net))[0] || null;
 }
 function parseTrip(q) {
-  const whole = matchStation(q);
-  if (whole && fold(whole.name).startsWith(fold(q))) return null;      // «San Sebastián» es una estación, no un viaje
+  const fq = fold(q);
+  if ([...STATIONS.values()].some(s => nameHas(s.name, q))) return null;   // «Santa Justa», «Madrid Atocha»: estaciones, no viajes
   const parts = q.split(/\s*(?:→|->|>|–|—|\s-\s|\sa\s|\shasta\s|\sto\s)\s*/i).filter(Boolean);
-  if (parts.length === 2) { const A = matchStation(parts[0]), B = matchStation(parts[1]); if (A && B && A !== B) return {from:A, to:B}; }
+  if (parts.length === 2) { const A = matchStation(parts[0]), B = matchStation(parts[1]); if (A && B && A !== B && (A.hub || A) !== (B.hub || B)) return {from:A, to:B}; }
   const w = q.trim().split(/\s+/);
   for (let i = 1; i < w.length; i++) {
     const l = w.slice(0, i).join(' '), r = w.slice(i).join(' ');
     if (l.length < 4 || r.length < 4) continue;
-    const A = matchStation(l), B = matchStation(r); if (A && B && A !== B) return {from:A, to:B};
+    const A = matchStation(l), B = matchStation(r);
+    if (A && B && A !== B && (A.hub || A) !== (B.hub || B)) return {from:A, to:B};
   }
   return null;
 }
@@ -2116,17 +2171,17 @@ function doSearch() {
     const list = tripsFor(trip.from, trip.to);
     results = list.map(x => ({kind:'trip', t:x.t || plannedTrain(x.trip), trip}));
     hl = 0;
-    resEl.innerHTML = `<div class="res-h">Viajes ${esc(trip.from.name)} → ${esc(trip.to.name)}</div>` + (list.length ? list.map((x, i) => { const o = x.t || x.trip; return `<button data-i="${i}" class="${i === hl ? 'hl' : ''}"><i style="width:9px;height:9px;border-radius:50%;background:${CAT_COLOR[o.cat]}"></i>${esc(o.label)} ${esc(x.t ? x.t.number : x.trip.num)}${x.kind === 'plan' ? '<em class="k-plan">programado</em>' : x.kind === 'nolive' ? '<em class="k-nolive">sin datos</em>' : ''}<small>${x.dep ? fmtHM(x.dep) : '—'} → ${fmtHM(x.arr)}${x.delay > 0 ? ` <b class="c-${delayClass(x.delay)}">+${x.delay}′</b>` : ''}</small></button>`; }).join('')
+    resEl.innerHTML = `<div class="res-h">Viajes ${esc(trip.from.name)} → ${esc(trip.to.name)}</div>` + (list.length ? list.map((x, i) => { const o = x.t || x.trip; return `<button data-i="${i}" class="${i === hl ? 'hl' : ''}"><i style="width:9px;height:9px;border-radius:50%;background:${CAT_COLOR[o.cat]}"></i>${esc(o.label)} ${esc(x.t ? x.t.number : x.trip.num)}${x.kind === 'plan' ? '<em class="k-plan">programado</em>' : x.kind === 'nolive' ? '<em class="k-nolive">sin datos</em>' : x.kind === 'cut' ? '<em class="k-cut">afectado por corte</em>' : ''}<small>${x.dep ? fmtHM(x.dep) : '—'} → ${fmtHM(x.arr)}${x.delay > 0 ? ` <b class="c-${delayClass(x.delay)}">+${x.delay}′</b>` : ''}</small></button>`; }).join('')
       : `<div class="none">Ahora no circula ningún tren de ${esc(trip.from.name)} a ${esc(trip.to.name)}.</div>`);
     resEl.classList.add('open');
     resEl.querySelectorAll('button').forEach(b => b.onmousedown = ev => { ev.preventDefault(); choose(+b.dataset.i); });
     return;
   }
   const nq = q.normalize('NFD').replace(/\p{Diacritic}/gu, '');
-  const served = s => [...s.codes].some(c => sched.byStop.has(c)) ? 1 : 0;
+  const served = s => (sched.byStop.get(norm(s.code)) || []).length + (s.net ? 1e4 : 0);     // más trenes en el horario, antes
   const starts = s => fold(s.name).startsWith(nq) || fold(s.name).split(/[\s\-\/.]+/).some(w => w.startsWith(nq)) ? 1 : 0;
-  const stn = [...STATIONS.values()].filter(s => !s.junction && fold(s.name).includes(nq))
-    .sort((a, b) => (starts(b) - starts(a)) || (b.net - a.net) || (served(b) - served(a)) || (b.major - a.major) || a.name.length - b.name.length).slice(0, 7).map(s => ({kind:'st', s}));
+  const stn = [...STATIONS.values()].filter(s => !s.junction && nameHas(s.name, q))
+    .sort((a, b) => (starts(b) - starts(a)) || (served(b) - served(a)) || (b.major - a.major) || a.name.length - b.name.length).slice(0, 7).map(s => ({kind:'st', s}));
   const trn = [...trains.values()].filter(t => t.number.includes(q) || (t.label + ' ' + t.number).toLowerCase().includes(q)).slice(0, 6).map(t => ({kind:'tr', t}));
   results = [...stn, ...trn]; hl = 0;
   resEl.innerHTML = results.length ? results.map((r, i) => r.kind === 'st'
