@@ -132,7 +132,7 @@ a{color:var(--info)}
 #log .late{--lc:var(--late);border-left-color:rgba(251,146,60,.5)}
 
 /* Vista estación */
-#station{background:var(--panel);z-index:3}
+#station,#trainv{background:var(--panel);z-index:3}
 .st-head{position:sticky;top:0;background:var(--panel);z-index:2;padding:14px 16px 12px;border-bottom:1px solid var(--line)}
 .st-head .back{display:inline-flex;align-items:center;gap:6px;background:none;border:0;color:var(--muted);cursor:pointer;font-size:12px;padding:0;margin-bottom:10px}
 .st-head .back:hover{color:var(--text)}
@@ -234,6 +234,9 @@ body:not(.mode-sim) .sim-only{display:none!important}
 .pp-foot{margin-top:9px;font-size:11px;color:var(--dim)}
 
 .legend{background:rgba(10,15,24,.92);border:1px solid var(--line-2);border-radius:10px;padding:10px 12px;color:var(--text);font-size:11.5px;box-shadow:0 6px 24px rgba(0,0,0,.45);backdrop-filter:blur(6px);max-width:250px}
+.lt-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:none;border:0;color:var(--muted);font:600 10px Inter,sans-serif;text-transform:uppercase;letter-spacing:.12em;cursor:pointer;padding:0 0 8px}
+.lt-btn svg{transition:transform .2s}
+.legend.min .lt-btn{padding:0} .legend.min .lt-btn svg{transform:rotate(180deg)} .legend.min .lg-body{display:none}
 .legend .lt{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px}
 .legend .r{display:flex;align-items:center;gap:9px;padding:2px 0}
 .legend .ln{width:22px;height:3px;border-radius:2px;flex:none}
@@ -244,6 +247,73 @@ body:not(.mode-sim) .sim-only{display:none!important}
 .banner{background:rgba(10,15,24,.94);border:1px solid var(--line-2);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--muted);box-shadow:0 6px 24px rgba(0,0,0,.45);max-width:420px;display:none}
 .banner.on{display:block}
 .banner b{color:var(--text)}
+
+
+/* ---------- v3: vistas, marcadores, ficha de tren ---------- */
+.view.on{animation:viewIn .22s ease}
+@keyframes viewIn{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:none}}
+.tmk{background:none;border:0}
+.tdot{position:relative;width:24px;height:24px;transition:transform .25s ease}
+.tdot .core{position:absolute;left:7px;top:7px;width:10px;height:10px;border-radius:50%;background:var(--c);
+  box-shadow:0 0 0 1.6px #05080d,0 0 10px color-mix(in srgb,var(--c) 55%,transparent);transition:box-shadow .3s}
+.tdot .hd{position:absolute;inset:0;transition:opacity .3s}
+.tdot .hd::before{content:"";position:absolute;left:50%;top:0;margin-left:-4px;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:7px solid var(--c);filter:drop-shadow(0 0 1px #05080d)}
+.tdot.stop .hd{opacity:0}
+.tdot.late .core{box-shadow:0 0 0 2.2px var(--late),0 0 10px rgba(251,146,60,.5)}
+.tdot.held .core{box-shadow:0 0 0 2.2px var(--crit),0 0 12px rgba(239,68,68,.7);animation:heldp 1.2s ease-in-out infinite}
+@keyframes heldp{50%{box-shadow:0 0 0 5px rgba(239,68,68,.25),0 0 12px rgba(239,68,68,.7)}}
+.tdot.sel{transform:scale(1.55);z-index:5}
+.tdot.sel .core{box-shadow:0 0 0 2px #fff,0 0 0 5px color-mix(in srgb,var(--c) 45%,transparent),0 0 16px var(--c)}
+#map.z9 .tdot:not(.sel){transform:scale(1.15)} #map.z10 .tdot:not(.sel){transform:scale(1.3)}
+.leaflet-marker-icon.tmk:hover{z-index:9000!important}
+.leaflet-tooltip.ttip .tt{min-width:180px}
+.tt1{display:flex;align-items:center;gap:7px}
+.tt1 i{width:8px;height:8px;border-radius:50%;flex:none}
+.tt1 .pill{margin-left:auto}
+.tt2{color:var(--muted);font-size:11px;margin-top:2px}
+.tv-title{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.st-head h2 .arrow{color:var(--dim);font-weight:400}
+.meta .fresh{color:var(--ok)}
+.tv-stats{display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:8px;padding:14px 16px 4px}
+.tv-stats>div{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:9px 10px;min-width:0}
+.tv-stats small{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+.tv-stats b{font:600 20px var(--mono);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tv-stats b.sm{font:600 13px Inter,sans-serif;margin-top:3px}
+.tv-stats em{font-style:normal;font-size:11px;color:var(--muted);margin-left:3px;font-family:Inter,sans-serif}
+.tv-stats span{font:500 11.5px var(--mono);color:var(--muted)}
+.tv-prog{height:4px;border-radius:9px;background:var(--line-2);margin:12px 16px 0;overflow:hidden}
+.tv-prog i{display:block;height:100%;background:linear-gradient(90deg,var(--line-2),var(--text));border-radius:9px;transition:width .8s ease}
+.tv-st{margin:12px 16px 0}
+.tv-actions{display:flex;gap:8px;padding:12px 16px 4px}
+.btn.sm{padding:7px 10px;font-size:12px;flex:1;gap:6px}
+.tl{padding:8px 0 6px;position:relative}
+.tl-row{position:relative;display:grid;grid-template-columns:18px 1fr auto;gap:10px;align-items:center;width:100%;padding:7px 16px 7px 20px;background:none;border:0;text-align:left;cursor:pointer}
+.tl-row:hover{background:var(--panel-2)}
+.tl-row::before{content:"";position:absolute;left:28px;top:0;bottom:0;width:2px;background:var(--line-2)}
+.tl-row:first-child::before{top:50%} .tl-row:last-child::before{bottom:50%}
+.tl-row.passed::before{background:var(--dim)}
+.tl-dot{position:relative;z-index:1;justify-self:center;width:10px;height:10px;border-radius:50%;background:var(--panel);border:2px solid var(--muted)}
+.tl-row.passed .tl-dot{background:var(--dim);border-color:var(--dim)}
+.tl-row.next .tl-dot{border-color:var(--info);background:var(--info);box-shadow:0 0 0 4px rgba(56,189,248,.2);animation:nextp 1.6s ease-in-out infinite}
+@keyframes nextp{50%{box-shadow:0 0 0 7px rgba(56,189,248,.08)}}
+.tl-name{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-row.passed .tl-name{color:var(--dim)}
+.tl-row.next .tl-name{font-weight:600}
+.tl-time{font:500 12px var(--mono);display:flex;gap:6px;align-items:baseline;color:var(--muted)}
+.tl-time s{color:var(--dim);font-size:11px}
+.tl-time b{font-weight:600;color:var(--text)}
+.tl-row.passed .tl-time b{color:var(--dim);font-weight:500}
+.tl .none{padding:12px 16px;color:var(--muted)}
+.tv-foot{padding:0 16px 16px}
+.row .t3{display:flex;align-items:center;gap:7px;color:var(--dim);font-size:11px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rp{flex:none;width:38px;height:3px;border-radius:9px;background:var(--line-2);overflow:hidden}
+.rp i{display:block;height:100%;opacity:.9}
+#spark svg{display:block;width:100%;height:44px}
+.spark-ax{display:flex;justify-content:space-between;font:500 10.5px var(--mono);color:var(--dim);margin-top:4px}
+.spark-empty{font-size:11.5px;color:var(--dim);padding:8px 0}
+#toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:rgba(15,22,34,.96);border:1px solid var(--line-2);color:var(--text);padding:9px 14px;border-radius:10px;font-size:12.5px;box-shadow:0 10px 30px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:2000}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+.kpi b,.hero .big{transition:color .3s}
 
 @keyframes live{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}70%{box-shadow:0 0 0 7px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
 @keyframes blink{50%{opacity:.3}}
@@ -316,6 +386,10 @@ body:not(.mode-sim) .sim-only{display:none!important}
         </div>
       </div>
       <div class="sec">
+        <div class="sec-title">Puntualidad <span>últimos 30 min</span></div>
+        <div id="spark"><div class="spark-empty">Se irá dibujando con los datos de los próximos minutos</div></div>
+      </div>
+      <div class="sec">
         <div class="sec-title">Retrasos <span id="d-note">trenes en circulación</span></div>
         <div class="bar"><i id="db-0" style="background:var(--ok)"></i><i id="db-1" style="background:var(--warn)"></i><i id="db-2" style="background:var(--late)"></i><i id="db-3" style="background:var(--crit)"></i></div>
         <div class="blegend">
@@ -361,6 +435,7 @@ body:not(.mode-sim) .sim-only{display:none!important}
     <section class="view" id="v-registro"><ul id="log" aria-live="polite"></ul></section>
 
     <section class="view" id="station" aria-live="polite"></section>
+    <section class="view" id="trainv" aria-live="polite"></section>
   </div>
 
   <details class="foot" id="foot">
@@ -401,6 +476,7 @@ body:not(.mode-sim) .sim-only{display:none!important}
 </aside>
 
 <main id="map" aria-label="Mapa de la red ferroviaria"></main>
+<div id="toast" role="status"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
@@ -414,7 +490,10 @@ if (!window.L) { document.getElementById('map').innerHTML = '<div style="padding
 const CFG = {
   FLOTA: 'https://tiempo-real.largorecorrido.renfe.com/renfe-visor/flotaLD.json',
   RUTAS: 'https://tiempo-real.largorecorrido.renfe.com/renfe-visor/trenesConEstacionesLD.json',
-  POLL_MS: 15000, ROUTES_MS: 180000, RETRY_MS: 60000, TIMEOUT_MS: 12000,
+  // Proxy propio en Supabase (Edge Function «renfe-proxy»): añade CORS a los datos de Renfe
+  SUPABASE_PROXY: 'https://dyxrgskqftlxetcgoebp.supabase.co/functions/v1/renfe-proxy',
+  FEED_PERIOD_MS: 15000,   // Renfe publica una actualización nueva cada ~15 s (medido)
+  POLL_MS: 15000, ROUTES_MS: 120000, RETRY_MS: 30000, TIMEOUT_MS: 10000,
   PUBLIC_PROXIES: [
     {name:'allorigins',   build:u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u)},
     {name:'codetabs',     build:u => 'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(u)},
@@ -744,7 +823,7 @@ const drawOrder = [...EDGES].sort((a, b) => (a.type === 'av') - (b.type === 'av'
 for (const e of drawOrder) {
   const av = e.type === 'av', w = av ? 3.2 : 2.2;
   e.casing = L.polyline(e.geom, {pane:'tracks', color:'#04070c', weight:w + 3, opacity:.9, interactive:false}).addTo(map);
-  e.glow   = L.polyline(e.geom, {pane:'tracks', color:COLOR.ok, weight:av ? 11 : 9, opacity:.1, className:'trk-glow'}).addTo(map);
+  e.glow   = L.polyline(e.geom, {pane:'tracks', color:COLOR.ok, weight:av ? 11 : 9, opacity:.1, className:'trk-glow', bubblingMouseEvents:false}).addTo(map);
   e.core   = L.polyline(e.geom, {pane:'tracks', color:COLOR.ok, weight:w, opacity:.85, interactive:false, className:'trk-core', lineCap:'round'}).addTo(map);
   e.glow.bindPopup(() => edgeHTML(e), {className:'dark-popup', minWidth:260, maxWidth:260});
 }
@@ -770,18 +849,24 @@ const mapEl = $('map');
 function syncZoom() {
   const z = map.getZoom();
   mapEl.classList.toggle('z7', z >= 7); mapEl.classList.toggle('z9', z >= 9);
-  const r = z >= 10 ? 7 : z >= 8 ? 6 : 5;
-  for (const t of trains.values()) { t.baseR = r; styleTrain(t, true); }
+  mapEl.classList.toggle('z10', z >= 10);
 }
 map.on('zoomend', syncZoom);
 
 // Leyenda y aviso
 const legend = L.control({position:'bottomleft'});
-legend.onAdd = () => { const d = L.DomUtil.create('div', 'legend'); d.id = 'legend'; L.DomEvent.disableClickPropagation(d); return d; };
+legend.onAdd = () => {
+  const d = L.DomUtil.create('div', 'legend' + (store.get('legend', window.innerHeight < 820) ? ' min' : '')); d.id = 'legend';
+  L.DomEvent.disableClickPropagation(d);
+  d.addEventListener('click', e => { if (e.target.closest('.lt-btn')) { d.classList.toggle('min'); store.set('legend', d.classList.contains('min')); } });
+  return d;
+};
 legend.addTo(map);
 function renderLegend() {
   const live = state.mode === 'live';
   $('legend').innerHTML = `
+    <button class="lt-btn" aria-label="Mostrar u ocultar la leyenda"><span>Leyenda</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 15 6-6 6 6"/></svg></button>
+    <div class="lg-body">
     <div class="lt">Estado de vía${live ? ' · inferido' : ''}</div>
     <div class="r"><i class="ln" style="background:var(--ok)"></i>Circulación normal</div>
     <div class="r"><i class="ln" style="background:var(--warn)"></i>${live ? 'Retrasos en el tramo' : 'Precaución · velocidad reducida'}</div>
@@ -794,7 +879,7 @@ function renderLegend() {
     <div class="r"><i class="pt" style="background:var(--md)"></i>Media Distancia</div>
     ${live ? '' : '<div class="r"><i class="pt" style="background:var(--fr)"></i>Mercancías</div>'}
     <div class="r"><i class="pt" style="background:#0a0f18;box-shadow:0 0 0 2px var(--late)"></i>Retraso ≥ 10 min</div>
-    <div class="note">${live ? 'Posiciones: Renfe en tiempo real' : state.mode === 'sim' ? 'Simulación con datos ficticios' : 'Conectando con Renfe…'}</div>`;
+    <div class="note">${live ? 'Posiciones: Renfe en tiempo real' : state.mode === 'sim' ? 'Simulación con datos ficticios' : 'Conectando con Renfe…'}</div></div>`;
 }
 const banner = L.control({position:'topleft'});
 banner.onAdd = () => { const d = L.DomUtil.create('div', 'banner'); d.id = 'banner'; return d; };
@@ -804,83 +889,144 @@ function setBanner(html) { const b = $('banner'); b.innerHTML = html || ''; b.cl
 /* =====================================================================
    5. ESTADO GLOBAL Y TRENES (comunes a tiempo real y simulación)
    ===================================================================== */
-const state = {mode:'wait', speed:1, simTime:Date.now(), selected:null, station:null, tab:'resumen'};
+const state = {mode:'wait', speed:1, simTime:Date.now(), selected:null, station:null, tab:'resumen', view:'resumen', follow:false};
 const trains = new Map();               // id -> tren
 const groups = {av:L.layerGroup().addTo(map), ld:L.layerGroup().addTo(map), md:L.layerGroup().addTo(map), fr:L.layerGroup().addTo(map)};
 let routeLayer = null;
 const nowMs = () => state.mode === 'sim' ? state.simTime : Date.now();
 
+// Marcador: punto de color con flecha de rumbo (DOM, para poder girarla en cada fotograma)
+// Marcador con posición subpíxel (Leaflet redondea a píxeles enteros y el movimiento lento se vería a saltos)
+const SmoothMarker = L.Marker.extend({
+  update() { if (this._icon && this._map) this._setPos(this._map.project(this._latlng)._subtract(this._map.getPixelOrigin())); return this; },
+});
+const ICONS = {};
+for (const c in CAT_COLOR) ICONS[c] = L.divIcon({className:'tmk', iconSize:[24, 24], iconAnchor:[12, 12],
+  html:`<div class="tdot" style="--c:${CAT_COLOR[c]}"><i class="hd"></i><i class="core"></i></div>`});
 function createMarker(t) {
-  t.baseR = map.getZoom() >= 8 ? 6 : 5;
-  t.marker = L.circleMarker(t.pos, {pane:'trains', radius:t.baseR, fillColor:CAT_COLOR[t.cat], fillOpacity:1, color:'#05080d', weight:1.6, bubblingMouseEvents:false});
-  t.marker.bindTooltip(() => `<b>${esc(t.label)} ${esc(t.number)}</b> · ${delayText(t.delay)}`, {className:'ttip', direction:'top', offset:[0, -6]});
-  t.pop = document.createElement('div'); t.pop.className = 'pp';
-  t.marker.bindPopup(t.pop, {className:'dark-popup', minWidth:280, maxWidth:280, autoPan:true});
-  t.marker.on('popupopen', () => selectTrain(t));
-  t.marker.on('popupclose', () => { if (state.selected === t) deselect(); });
+  t.marker = new SmoothMarker(t.pos, {icon:ICONS[t.cat], pane:'trains', keyboard:false, bubblingMouseEvents:false});
+  t.marker.bindTooltip(() => trainTip(t), {className:'ttip', direction:'top', offset:[0, -10], opacity:1});
+  t.marker.on('click', () => selectTrain(t));
+  t.marker.on('add', () => { const el = t.marker.getElement(); t.dotEl = el.firstChild; t.hdEl = el.querySelector('.hd'); t.styleKey = null; t.lastAng = null; styleTrain(t); });
+  t.hdRef = t.pos; t.ang = null;
   groups[t.cat].addLayer(t.marker);
 }
-function styleTrain(t, force) {
-  const sel = state.selected === t;
-  const stroke = t.held ? '#ef4444' : t.delay >= 10 ? '#fb923c' : '#05080d';
-  const key = stroke + sel + t.baseR;
-  if (!force && key === t.styleKey) return;
-  t.styleKey = key;
-  t.marker.setStyle({color:sel ? '#ffffff' : stroke, weight:sel ? 2.6 : (stroke === '#05080d' ? 1.6 : 2.4), radius:sel ? t.baseR + 3 : t.baseR});
-  t.marker.setRadius(sel ? t.baseR + 3 : t.baseR);
+function trainTip(t) {
+  return `<div class="tt"><div class="tt1"><i style="background:${CAT_COLOR[t.cat]}"></i><b>${esc(t.label)} ${esc(t.number)}</b><span class="pill ${delayClass(t.delay)}">${delayText(t.delay)}</span></div><div class="tt2">${esc(trainDesc(t))}</div></div>`;
+}
+function styleTrain(t) {
+  if (!t.dotEl) return;
+  const moving = t.src === 'sim' ? t.v > 1 : (t.trk ? t.trk.v > 1 : (t.speed || 0) > 3);
+  const cls = 'tdot' + (t.held ? ' held' : t.delay >= 10 ? ' late' : '') + (state.selected === t ? ' sel' : '') + (moving && t.ang !== null ? '' : ' stop');
+  if (cls !== t.styleKey) { t.dotEl.className = cls; t.styleKey = cls; }
 }
 function removeTrain(t) {
-  if (state.selected === t) t.marker.closePopup();
+  if (state.selected === t) { deselect(); if (state.view === 'train') showView(state.tab); }
   groups[t.cat].removeLayer(t.marker);
   trains.delete(t.id);
 }
 function clearTrains() { for (const t of [...trains.values()]) removeTrain(t); }
 
+function routePathOf(t) { return state.mode === 'live' ? liveRoutePath(t) : simRoutePath(t); }
 function selectTrain(t) {
   if (state.selected && state.selected !== t) deselect();
   state.selected = t;
-  t.pop.innerHTML = popupHTML(t);
-  t.marker.getPopup().update();
-  setTimeout(() => { const p = t.marker.getPopup(); if (p) p.options.autoPan = false; }, 400);
-  const path = state.mode === 'live' ? liveRoutePath(t) : simRoutePath(t);
+  const path = routePathOf(t);
   if (path && path.length > 1) {
     routeLayer = L.layerGroup([
-      L.polyline(path, {pane:'route', color:'#ffffff', weight:2.2, opacity:.8, dashArray:'1 6', lineCap:'round', interactive:false}),
-      L.circleMarker(path[0], {pane:'route', radius:7, color:'#fff', weight:1.5, fill:false, opacity:.8, interactive:false}),
+      L.polyline(path, {pane:'route', color:CAT_COLOR[t.cat], weight:6, opacity:.18, lineCap:'round', interactive:false}),
+      L.polyline(path, {pane:'route', color:'#ffffff', weight:2, opacity:.85, dashArray:'1 6', lineCap:'round', interactive:false}),
+      L.circleMarker(path[0], {pane:'route', radius:6, color:'#fff', weight:1.5, fill:false, opacity:.7, interactive:false}),
       L.circleMarker(path[path.length - 1], {pane:'route', radius:7, color:'#fff', weight:2.5, fill:false, interactive:false}),
     ]).addTo(map);
   }
-  styleTrain(t, true);
+  styleTrain(t);
+  showView('train');
+  renderTrainView(true);
 }
 function deselect() {
-  const t = state.selected; state.selected = null;
+  const t = state.selected; state.selected = null; state.follow = false;
   if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
-  if (t) { const p = t.marker.getPopup(); if (p) p.options.autoPan = true; styleTrain(t, true); }
+  if (t) styleTrain(t);
 }
+function closeTrain() { deselect(); showView(state.station ? 'station' : state.tab); if (state.station) renderStation(); }
 function focusTrain(t) {
-  if (!t || !trains.has(t.id)) { addLog('info', 'Ese tren ya no está en circulación', ''); return; }
+  if (!t || !trains.has(t.id)) { toast('Ese tren ya no está en circulación'); return; }
   const cb = document.querySelector(`input[data-cat="${t.cat}"]`);
   if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
-  map.flyTo(t.pos, Math.max(map.getZoom(), 9), {duration:.8});
-  map.once('moveend', () => { if (trains.has(t.id)) t.marker.openPopup(); });
+  map.flyTo(t.pos, Math.max(map.getZoom(), 9), {duration:.9});
+  selectTrain(t);
 }
 
-function popupHTML(t) {
+// Ficha del tren en la barra lateral: datos principales y recorrido completo con horas
+function trainTimeline(t) {
+  const now = nowMs(), out = [];
+  if (t.src === 'sim') {
+    const r = t.route, T = SIM[t.type], last = r.path.length - 1, up = new Map(simUpcoming(t).map(u => [u.k, u]));
+    for (let k = 0; k <= last; k++) {
+      const code = r.path[k];
+      if (k > 0 && k < last && !T.stopAt(code)) continue;
+      const u = up.get(k);
+      const sched = t.schedDep0 + (k === 0 ? 0 : (r.start[k-1] + r.run[k-1])) * 1000;
+      const est = u ? (u.arrEst || u.depEst) : null;
+      out.push({name:ST[code].n, id:code, sched, est, delay:est ? Math.max(0, Math.round((est - (u.arrSched || u.depSched)) / 60000)) : 0,
+                passed:!u, current:!!(u && t.dwell > 0 && u.k === t.seg)});
+    }
+  } else {
+    const r = live.routes.get(t.id); if (!r) return null;
+    const j = r.stops.findIndex(s => s.code === t.next);
+    r.stops.forEach((s, i) => {
+      const sched = parseTime(i === 0 ? s.dep : s.time, now);
+      const passed = j >= 0 ? i < j : false;
+      out.push({name:exactName(s.code), code:s.code, sched, est:!passed && sched ? sched + t.delay * 60000 : null, delay:passed ? 0 : t.delay, passed, current:false, next:i === j});
+    });
+  }
+  return out;
+}
+function renderTrainView(scrollToNext) {
+  const t = state.selected, el = $('trainv');
+  if (!t || !trains.has(t.id)) { el.innerHTML = `<div class="empty">El tren ya no está en circulación.</div>`; return; }
   const v = state.mode === 'live' ? liveView(t) : simView(t);
-  const dc = 'c-' + delayClass(v.delay);
-  return `
-    <div class="pp-head"><span class="pp-badge" style="--c:${CAT_COLOR[t.cat]}">${esc(t.label)}</span><span class="pp-num">Nº ${esc(t.number)}</span></div>
-    <div class="pp-od"><div><small>Origen</small><b>${esc(v.from)}</b></div><span class="pp-arrow">→</span><div class="r"><small>Destino</small><b>${esc(v.to)}</b></div></div>
-    <div class="pp-prog"><i style="width:${clamp(v.pct, 0, 100).toFixed(1)}%"></i></div>
-    <div class="pp-grid">
-      <div><small>Velocidad actual</small><b class="big">${v.speed === null ? '–' : (v.approx ? '≈' : '') + v.speed}<em>km/h</em></b></div>
-      <div><small>Retraso estimado</small><b class="big ${dc}">${v.delay > 0 ? '+' + v.delay : '0'}<em>min</em></b></div>
-      <div><small>Próxima estación</small><b>${esc(v.next || '—')}</b></div>
-      <div><small>Llegada prevista</small><b class="mono">${v.nextTime ? fmtHM(v.nextTime) : '—'}</b></div>
+  const tl = trainTimeline(t);
+  const spd = state.mode === 'live' ? (t.trk && t.trk.v > 0.5 ? Math.round(t.trk.v * 3.6) : t.speed) : Math.round(t.v * 3.6);
+  const upd = state.mode === 'live' && live.recvAt ? Math.max(0, Math.round((Date.now() - live.recvAt) / 1000)) : null;
+  el.innerHTML = `
+    <div class="st-head">
+      <button class="back" id="tv-back"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>Volver</button>
+      <div class="tv-title"><span class="pp-badge" style="--c:${CAT_COLOR[t.cat]}">${esc(t.label)}</span><span class="pp-num">Nº ${esc(t.number)}</span></div>
+      <h2>${esc(v.from)} <span class="arrow">→</span> ${esc(v.to)}</h2>
+      <div class="meta"><span>${esc(CAT_LABEL[t.cat])}</span>${t.mat ? `<span>· Material ${esc(t.mat)}</span>` : ''}${upd !== null ? `<span class="fresh">· actualizado hace ${upd} s</span>` : ''}</div>
     </div>
-    <div class="pp-status s-${v.code}"><span></span>${esc(v.status)}</div>
-    ${v.stops && v.stops.length ? `<div class="pp-stops">${v.stops.map(s => `<div><b>${esc(s.name)}</b><span>${fmtHM(s.est)}${s.delay > 0 ? ` <span class="c-${delayClass(s.delay)}">+${s.delay}</span>` : ''}</span></div>`).join('')}</div>` : ''}
-    <div class="pp-foot">${esc(CAT_LABEL[t.cat])}${v.foot ? ' · ' + esc(v.foot) : ''}</div>`;
+    <div class="tv-stats">
+      <div><small>Velocidad</small><b>${spd === null || spd === undefined ? '–' : (state.mode === 'live' ? '≈' : '') + spd}<em>km/h</em></b></div>
+      <div><small>Retraso</small><b class="c-${delayClass(v.delay)}">${v.delay > 0 ? '+' + v.delay : '0'}<em>min</em></b></div>
+      <div><small>Próxima</small><b class="sm">${esc(v.next || '—')}</b><span>${v.nextTime ? fmtHM(v.nextTime) : ''}</span></div>
+    </div>
+    <div class="tv-prog"><i style="width:${clamp(v.pct, 0, 100).toFixed(1)}%"></i></div>
+    <div class="pp-status s-${v.code} tv-st"><span></span>${esc(v.status)}</div>
+    <div class="tv-actions">
+      <button class="btn ghost sm" id="tv-follow">${state.follow ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>Dejar de seguir' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Seguir en el mapa'}</button>
+      <button class="btn ghost sm" id="tv-fit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></svg>Ver recorrido</button>
+    </div>
+    <div class="tl">${tl ? tl.map((s, i) => `
+      <button class="tl-row${s.passed ? ' passed' : ''}${s.next || s.current ? ' next' : ''}" data-i="${i}">
+        <i class="tl-dot"></i>
+        <span class="tl-name">${esc(s.name)}</span>
+        <span class="tl-time">${s.est && s.delay > 0 ? `<s>${fmtHM(s.sched)}</s><b class="c-${delayClass(s.delay)}">${fmtHM(s.est)}</b>` : s.sched ? `<b>${fmtHM(s.sched)}</b>` : ''}</span>
+      </button>`).join('') : '<div class="none">Cargando recorrido…</div>'}</div>
+    <div class="pp-foot tv-foot">${esc(v.foot || '')}</div>`;
+  $('tv-back').onclick = closeTrain;
+  $('tv-follow').onclick = () => {
+    state.follow = !state.follow; state.followReady = false;
+    if (state.follow) { map.flyTo(t.pos, Math.max(map.getZoom(), 10), {duration:.8}); map.once('moveend', () => { state.followReady = true; }); }
+    renderTrainView();
+  };
+  $('tv-fit').onclick = () => { state.follow = false; const p = routePathOf(t); if (p && p.length > 1) map.flyToBounds(L.latLngBounds(p), {padding:[50, 50], duration:.8}); renderTrainView(); };
+  if (tl) el.querySelectorAll('.tl-row').forEach(b => b.onclick = () => {
+    const s = tl[+b.dataset.i], st = s.id ? STATIONS.get(s.id) : CODE2ST.get(s.code);
+    if (st) { closeTrain(); map.flyTo(st.c, Math.max(map.getZoom(), 9), {duration:.8}); openStation(st, false); }
+  });
+  if (scrollToNext) { const n = el.querySelector('.tl-row.next') || el.querySelector('.tl-row:not(.passed)'); if (n) n.scrollIntoView({block:'center'}); }
 }
 
 function edgeHTML(e) {
@@ -905,7 +1051,7 @@ function edgeHTML(e) {
 /* =====================================================================
    6. TIEMPO REAL — Renfe (flotaLD.json + trenesConEstacionesLD.json)
    ===================================================================== */
-const live = {ok:false, everOk:false, failures:0, feedTime:null, lastOk:0, via:null, snapshot:false, lastSource:'', lastErr:'', routes:new Map(), routesAt:0, routesLoading:false, timer:null, polls:0};
+const live = {recvAt:0, minLag:null, dupes:0, ok:false, everOk:false, failures:0, feedTime:null, lastOk:0, via:null, snapshot:false, lastSource:'', lastErr:'', routes:new Map(), routesAt:0, routesLoading:false, timer:null, polls:0};
 
 function accessRoutes() {
   const r = [];
@@ -913,6 +1059,7 @@ function accessRoutes() {
     const base = settings.proxy.trim();
     r.push({name:'proxy propio', build:u => base.includes('{url}') ? base.replace('{url}', encodeURIComponent(u)) : base + (/[=\/]$/.test(base) ? '' : (base.includes('?') ? '&url=' : '?url=')) + encodeURIComponent(u)});
   }
+  r.push({name:'Supabase', build:u => CFG.SUPABASE_PROXY + '?f=' + (u.includes('flotaLD') ? 'flota' : 'rutas')});
   r.push({name:'directo', build:u => u});
   if (settings.pub) r.push(...CFG.PUBLIC_PROXIES);
   // Copia publicada junto a la web por GitHub Actions (mismo origen, sin CORS; refresco ~5-10 min)
@@ -968,15 +1115,16 @@ async function pollLive() {
     if (!list.length) throw new Error('respuesta sin trenes');
     const ft = parseTime(data.fechaActualizacion);
     if (state.mode === 'live' && ft && live.feedTime && ft <= live.feedTime) {  // mismos datos o más antiguos: no se reprocesan
-      const age = Math.round((Date.now() - live.feedTime) / 60000);
-      if (live.snapshot) setConn('live', `Casi en directo${age > 1 ? ' · ' + age + ' min' : ''}`);
-      live.timer = setTimeout(pollLive, CFG.POLL_MS); renderDiag(); return;
+      live.dupes++;
+      live.timer = setTimeout(pollLive, live.snapshot ? CFG.POLL_MS : (live.dupes < 8 ? 1500 : 5000)); renderDiag(); return;
     }
+    live.dupes = 0;
     if (state.mode !== 'live') enterLive();
     live.ok = live.everOk = true; live.failures = 0; live.lastOk = Date.now(); live.lastErr = '';
     live.feedTime = parseTime(data.fechaActualizacion);
-    const age = live.feedTime ? Math.round((Date.now() - live.feedTime) / 60000) : null;
-    setConn('live', live.snapshot ? `Casi en directo${age !== null && age > 1 ? ' · ' + age + ' min' : ''}` : 'En directo');
+    live.recvAt = Date.now();
+    if (live.feedTime) { const lag = live.recvAt - live.feedTime; live.minLag = live.minLag === null ? lag : Math.min(live.minLag + 200, lag); }
+    updateConn();
     ingestFleet(list);
     if (!live.routesLoading && (Date.now() - live.routesAt > CFG.ROUTES_MS || [...trains.values()].some(t => !live.routes.has(t.id)) && Date.now() - live.routesAt > 60000)) loadRoutes();
   } catch (e) {
@@ -986,7 +1134,21 @@ async function pollLive() {
     else if (settings.mode === 'live' && state.mode !== 'offline') enterOffline();
   }
   renderDiag();
-  live.timer = setTimeout(pollLive, state.mode === 'live' ? CFG.POLL_MS : CFG.RETRY_MS);
+  live.timer = setTimeout(pollLive, nextPollDelay());
+}
+// La siguiente consulta se programa para justo después de la próxima publicación de Renfe (~15 s)
+function nextPollDelay() {
+  if (state.mode !== 'live') return CFG.RETRY_MS;
+  if (live.snapshot || !live.feedTime || live.minLag === null) return live.snapshot ? CFG.POLL_MS : 3000;
+  const expected = live.feedTime + CFG.FEED_PERIOD_MS + live.minLag + 400;
+  return clamp(expected - Date.now(), 1000, CFG.FEED_PERIOD_MS);
+}
+function updateConn() {
+  if (state.mode !== 'live') return;
+  if (live.snapshot) {
+    const age = live.feedTime ? Math.round((Date.now() - live.feedTime) / 60000) : null;
+    setConn('live', `Casi en directo${age !== null && age > 1 ? ' · ' + age + ' min' : ''}`);
+  } else setConn('live', `En directo · ${Math.max(0, Math.round((Date.now() - live.recvAt) / 1000))} s`);
 }
 
 async function loadRoutes() {
@@ -1051,16 +1213,28 @@ function ingestFleet(list) {
     if (hav(t.stillPos, gps) > 150) { t.stillPos = gps; t.stillSince = fixTime; }
     t.stillFor = Math.max(0, (live.feedTime || now) - t.stillSince);
     t.nearStation = nearestCatStation(gps).d < 1500;
-    // Animación hasta la nueva posición, sobre la vía cuando es posible
-    const snap = snapToNetwork(gps);
-    const target = snap && snap.d < 6000 ? snap.pt : gps;
-    const from = t.marker.getLatLng();
-    const jump = hav([from.lat, from.lng], target);
-    if (first || jump > 40000) { t.pos = target; t.anim = null; t.marker.setLatLng(target); }
-    else if (jump > 5) {
-      const along = t.snap && snap && t.snap.e === snap.e && snap.d < 6000 && t.snap.d < 6000;
-      t.anim = {t0:now, t1:now + CFG.POLL_MS * 0.95, from:[from.lat, from.lng], to:target, e:along ? snap.e : null, s0:along ? t.snap.s : 0, s1:along ? snap.s : 0};
-    }
+    // Modelo de movimiento: posición sobre la vía + sentido + velocidad; entre lecturas se extrapola
+    // en cada fotograma. La hora del GPS se refiere a la de la publicación para no depender del reloj local.
+    const snap = snapToNetwork(gps), onTrack = snap && snap.d < 6000;
+    const fixClient = live.recvAt - Math.max(0, (live.feedTime || fixTime) - fixTime);
+    const prevTrk = t.trk;
+    if (onTrack) {
+      let dir = prevTrk ? prevTrk.dir : 0, v = prevTrk ? prevTrk.v : 0;
+      if (prevTrk && prevTrk.line === snap.e && fixTime > prevTrk.fix) {
+        const ds = snap.s - prevTrk.s0, dt = (fixTime - prevTrk.fix) / 1000;
+        if (Math.abs(ds) > 25) { dir = Math.sign(ds); const vv = clamp(Math.abs(ds) / dt, 0, 92); v = v ? v * 0.35 + vv * 0.65 : vv; }
+        else if (dt > 45) v = 0;
+      } else if (prevTrk && prevTrk.line !== snap.e) {
+        const a = pointAt(snap.e, snap.s - 300), b = pointAt(snap.e, snap.s + 300);
+        dir = hav(t.pos, a) < hav(t.pos, b) ? 1 : -1;                  // se aleja de donde estaba
+        v = t.speed ? t.speed / 3.6 : v;
+      }
+      if (t.stillFor > 90000) v = 0;
+      t.trk = {line:snap.e, s0:snap.s, fix:fixTime, t0:fixClient, dir, v};
+    } else t.trk = null;
+    t.gps = onTrack ? snap.pt : gps;
+    if (first || hav(t.pos, t.gps) > 40000) { t.blend = null; t.pos = t.gps; t.hdRef = t.pos; }
+    else t.blend = {from:t.pos.slice(), t0:performance.now(), dur:1100};
     t.snap = snap;
     t.held = !!(t.stillFor > 8 * 60000 && t.delay >= 15 && !t.nearStation);
     styleTrain(t);
@@ -1321,7 +1495,7 @@ function simTick(dtReal) {
     if (t.done) { removeTrain(t); sim.used.delete(t.number); sim.pending.push({type:t.type, at:state.simTime + rnd(60, 600) * 1000}); continue; }
     t.delay = simDelay(t); t.held = simStatus(t).code === 'held';
     t.pos = routePoint(t.route, t.dist);
-    if (map.hasLayer(groups[t.cat])) { t.marker.setLatLng(t.pos); styleTrain(t); }
+    styleTrain(t);
     if (t.delay >= 15 && !t.alerted) { t.alerted = true; addLog('late', `${t.label} ${t.number} · +${t.delay} min`, `${ST[t.route.path[0]].n} → ${ST[t.route.path[t.route.path.length - 1]].n} · retraso superior a 15 min`, {train:t}); }
     else if (t.delay < 5) t.alerted = false;
   }
@@ -1459,12 +1633,14 @@ function renderStation() {
    10. BARRA LATERAL
    ===================================================================== */
 function showView(v) {
-  document.querySelectorAll('.view').forEach(el => el.classList.toggle('on', el.id === (v === 'station' ? 'station' : 'v-' + v)));
-  if (v !== 'station') state.tab = v;
-  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', v !== 'station' && b.dataset.tab === v));
+  state.view = v;
+  const id = v === 'station' ? 'station' : v === 'train' ? 'trainv' : 'v-' + v;
+  document.querySelectorAll('.view').forEach(el => el.classList.toggle('on', el.id === id));
+  if (v !== 'station' && v !== 'train') state.tab = v;
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === v));
   if (v === 'trenes') renderTrainList();
 }
-document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { state.station = null; showView(b.dataset.tab); });
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { state.station = null; if (state.selected) deselect(); showView(b.dataset.tab); });
 
 const logEl = $('log'); let logTotal = 0;
 function addLog(level, title, detail, ref) {
@@ -1492,10 +1668,11 @@ function renderTrainList() {
   if (q) list = list.filter(t => (t.number + ' ' + t.label + ' ' + trainDesc(t)).toLowerCase().includes(q));
   list.sort(sort === 'num' ? (a, b) => a.number.localeCompare(b.number) : sort === 'cat' ? (a, b) => a.cat.localeCompare(b.cat) || b.delay - a.delay : (a, b) => b.delay - a.delay);
   const shown = list.slice(0, 250);
-  $('tlist').innerHTML = shown.length ? shown.map((t, i) => `<button class="row" data-i="${i}">
+  $('tlist').innerHTML = shown.length ? shown.map((t, i) => { const v = state.mode === 'live' ? liveView(t) : simView(t); return `<button class="row" data-i="${i}">
       <i class="d" style="background:${CAT_COLOR[t.cat]}"></i>
-      <div style="min-width:0"><div class="t1">${esc(t.label)} <small>${esc(t.number)}</small></div><div class="t2">${esc(trainDesc(t))}</div></div>
-      <span class="pill ${delayClass(t.delay)}">${t.delay > 0 ? '+' + t.delay + '′' : 'En hora'}</span></button>`).join('')
+      <div style="min-width:0"><div class="t1">${esc(t.label)} <small>${esc(t.number)}</small></div><div class="t2">${esc(trainDesc(t))}</div>
+        <div class="t3"><span class="rp"><i style="width:${clamp(v.pct, 0, 100).toFixed(0)}%;background:${CAT_COLOR[t.cat]}"></i></span>${v.next ? 'Próx. ' + esc(v.next) + (v.nextTime ? ' · ' + fmtHM(v.nextTime) : '') : ''}</div></div>
+      <span class="pill ${delayClass(t.delay)}">${t.delay > 0 ? '+' + t.delay + '′' : 'En hora'}</span></button>`; }).join('')
     + (list.length > shown.length ? `<div class="empty">… y ${list.length - shown.length} más. Usa el filtro.</div>` : '')
     : `<div class="empty">${trains.size ? 'Ningún tren coincide con el filtro.' : 'No hay trenes en circulación.'}</div>`;
   $('tlist').querySelectorAll('.row').forEach(el => el.onclick = () => focusTrain(shown[+el.dataset.i]));
@@ -1537,8 +1714,8 @@ document.querySelectorAll('input[data-cat]').forEach(cb => cb.addEventListener('
   const g = groups[cb.dataset.cat];
   if (cb.checked) {
     map.addLayer(g);
-    for (const t of trains.values()) if (t.cat === cb.dataset.cat) { t.marker.setLatLng(t.pos); styleTrain(t, true); }
-  } else { if (state.selected && state.selected.cat === cb.dataset.cat) state.selected.marker.closePopup(); map.removeLayer(g); }
+    for (const t of trains.values()) if (t.cat === cb.dataset.cat) { t.marker.setLatLng(t.pos); styleTrain(t); }
+  } else { if (state.selected && state.selected.cat === cb.dataset.cat) closeTrain(); map.removeLayer(g); }
   updateDashboard();
 }));
 $('f-labels').addEventListener('change', e => mapEl.classList.toggle('no-labels', !e.target.checked));
@@ -1594,30 +1771,97 @@ function updateDashboard() {
   $('k-inc').textContent = inc; $('k-inc').classList.toggle('has', EDGES.some(e => e.status === 'cut'));
   for (const s in km) { $('nb-' + s).style.width = (km[s] / TOTAL_KM * 100) + '%'; $('nl-' + s).textContent = nf.format(Math.round(km[s])) + ' km'; }
   $('net-total').textContent = nf.format(Math.round(TOTAL_KM)) + ' km';
-  if (state.selected && trains.has(state.selected.id) && state.selected.marker.isPopupOpen()) state.selected.pop.innerHTML = popupHTML(state.selected);
+  updateConn();
+  if (state.view === 'train' && state.selected) renderTrainView();
+  pushHistory(n ? onTime / n * 100 : null, n ? sum / n : null);
 }
 
 /* =====================================================================
-   11. BUCLES
+   11. BUCLES — animación continua con requestAnimationFrame
    ===================================================================== */
-let lastTick = performance.now();
-setInterval(() => {
-  const now = performance.now(), dtReal = Math.min(0.25, (now - lastTick) / 1000); lastTick = now;
-  if (state.mode === 'sim') simTick(dtReal);
-  else if (state.mode === 'live') {
-    const t0 = Date.now();
-    for (const t of trains.values()) {
-      if (!t.anim) continue;
-      const a = t.anim, f = clamp((t0 - a.t0) / (a.t1 - a.t0), 0, 1);
-      t.pos = a.e ? pointAt(a.e, a.s0 + (a.s1 - a.s0) * f) : [a.from[0] + (a.to[0] - a.from[0]) * f, a.from[1] + (a.to[1] - a.from[1]) * f];
-      if (map.hasLayer(groups[t.cat])) t.marker.setLatLng(t.pos);
-      if (f >= 1) t.anim = null;
-    }
+const easeOut = f => 1 - Math.pow(1 - f, 3);
+// Posición en directo en este instante: extrapolada sobre la vía desde la última lectura GPS (máx. 40 s)
+// y fundida suavemente con la posición anterior cuando llega una lectura nueva.
+function livePos(t, nowC) {
+  const k = t.trk;
+  let p, s = null;
+  if (k) { s = clamp(k.s0 + k.dir * k.v * clamp((nowC - k.t0) / 1000, 0, 40), 0, k.line.len); p = pointAt(k.line, s); }
+  else p = t.gps || t.pos;
+  t.trkS = s;
+  if (t.blend) {
+    const f = (performance.now() - t.blend.t0) / t.blend.dur;
+    if (f >= 1) t.blend = null;
+    else { const e = easeOut(f); p = [t.blend.from[0] + (p[0] - t.blend.from[0]) * e, t.blend.from[1] + (p[1] - t.blend.from[1]) * e]; }
   }
-}, 50);
+  return p;
+}
+function bearing(a, b) { return Math.atan2((b[1] - a[1]) * Math.cos(a[0] * RAD), b[0] - a[0]) / RAD; }
+function updateHeading(t) {
+  let ahead = null;
+  if (t.src === 'sim') { if (t.v > .5) ahead = routePoint(t.route, t.dist + 80); }
+  else if (t.trk && t.trk.v > .5 && t.trkS !== null) ahead = pointAt(t.trk.line, t.trkS + t.trk.dir * 80);
+  else if (hav(t.hdRef, t.pos) > 60) { ahead = t.pos; t.pos0 = t.hdRef; }
+  if (ahead) {
+    const from = ahead === t.pos ? t.pos0 : t.pos;
+    if (hav(from, ahead) > 5) t.ang = bearing(from, ahead);
+    t.hdRef = t.pos;
+  }
+  if (t.hdEl && t.ang !== null && (t.lastAng === null || Math.abs(t.ang - t.lastAng) > 0.8)) { t.hdEl.style.transform = `rotate(${t.ang.toFixed(1)}deg)`; t.lastAng = t.ang; }
+}
+let lastFrame = performance.now();
+function frame(nowP) {
+  const dtReal = Math.min(0.25, (nowP - lastFrame) / 1000); lastFrame = nowP;
+  if (state.mode === 'sim') simTick(dtReal);
+  if (state.mode === 'live' || state.mode === 'sim') {
+    const nowC = Date.now(), view = map.getBounds().pad(0.25);
+    for (const t of trains.values()) {
+      if (state.mode === 'live') t.pos = livePos(t, nowC);
+      if (!map.hasLayer(groups[t.cat])) continue;
+      if (t !== state.selected && !view.contains(t.pos)) continue;     // fuera de pantalla: no se toca el DOM
+      t.marker.setLatLng(t.pos);
+      updateHeading(t);
+      styleTrain(t);
+    }
+    if (state.follow && state.followReady && state.selected) map.panTo(state.selected.pos, {animate:false, noMoveStart:true});
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+map.on('dragstart', () => { if (state.follow) { state.follow = false; if (state.view === 'train') renderTrainView(); } });
+map.on('click', () => { if (state.view === 'train') closeTrain(); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || document.activeElement === qEl) return;
+  if (state.view === 'train') closeTrain(); else if (state.view === 'station') closeStation();
+});
+
+// Evolución de la puntualidad (una muestra cada 30 s, últimos 30 min)
+const punctHist = [];
+let lastHist = 0;
+function pushHistory(punct, delay) {
+  if (punct === null || Date.now() - lastHist < 30000) return;
+  lastHist = Date.now();
+  punctHist.push({t:nowMs(), p:punct, d:delay});
+  while (punctHist.length > 60) punctHist.shift();
+  renderSpark();
+}
+function renderSpark() {
+  const el = $('spark'); if (!el) return;
+  if (punctHist.length < 2) { el.innerHTML = '<div class="spark-empty">Se irá dibujando con los datos de los próximos minutos</div>'; return; }
+  const W = 320, H = 44, n = punctHist.length;
+  const pts = punctHist.map((h, i) => [i / (n - 1) * W, H - 4 - h.p / 100 * (H - 8)]);
+  const line = pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="Puntualidad en los últimos minutos">
+    <polygon points="0,${H} ${line} ${W},${H}" fill="rgba(34,197,94,.12)"/>
+    <polyline points="${line}" fill="none" stroke="#22c55e" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+  </svg><div class="spark-ax"><span>${fmtHM(punctHist[0].t)}</span><span>${Math.round(punctHist[n - 1].p)}% ahora</span></div>`;
+}
+
+let toastTimer = null;
+function toast(msg) { const el = $('toast'); el.textContent = msg; el.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('on'), 2600); }
+
 setInterval(updateDashboard, 1000);
-setInterval(() => { if (state.station) renderStation(); }, 5000);
-setInterval(() => { if (state.tab === 'trenes' && !state.station && document.activeElement !== $('tq')) renderTrainList(); }, 4000);
+setInterval(() => { if (state.view === 'station') renderStation(); }, 5000);
+setInterval(() => { if (state.view === 'trenes' && document.activeElement !== $('tq')) renderTrainList(); }, 4000);
 
 /* =====================================================================
    12. ARRANQUE
