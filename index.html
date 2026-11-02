@@ -1417,10 +1417,10 @@ function boardRows(list, kind) {
   }).join('');
 }
 let boardCache = null;
-function openStation(st) {
+function openStation(st, pan = true) {
   state.station = st;
   showView('station');
-  if (st.marker) map.panTo(st.c, {animate:true});
+  if (pan && st.marker) map.panTo(st.c, {animate:true});
   renderStation();
 }
 function closeStation() { state.station = null; showView(state.tab); }
@@ -1522,7 +1522,7 @@ function doSearch() {
 function choose(i) {
   const r = results[i]; if (!r) return;
   qEl.value = ''; resEl.classList.remove('open'); qEl.blur();
-  if (r.kind === 'st') { map.flyTo(r.s.c, Math.max(map.getZoom(), 9), {duration:.8}); openStation(r.s); } else focusTrain(r.t);
+  if (r.kind === 'st') { map.flyTo(r.s.c, Math.max(map.getZoom(), 9), {duration:.8}); openStation(r.s, false); } else focusTrain(r.t);
 }
 qEl.oninput = doSearch;
 qEl.onkeydown = e => {
