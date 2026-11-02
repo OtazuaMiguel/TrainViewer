@@ -1,0 +1,55 @@
+name: Datos (histórico e incidencias)
+
+# Cada ~15 min: muestra de puntualidad para la gráfica de 7 días e incidencias oficiales de Adif.
+# Se publica en la rama «datos» (un único commit que se sustituye, para no engordar el repositorio).
+on:
+  schedule:
+    - cron: '4,19,34,49 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: datos
+  cancel-in-progress: false
+
+jobs:
+  datos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Navegador para leer Adif
+        run: |
+          npm i --no-save playwright@1.49.1 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+
+      - name: Datos anteriores
+        run: |
+          mkdir -p prev
+          if git fetch -q --depth=1 origin datos; then
+            for f in historico.json incidencias.json; do git show "origin/datos:$f" > "prev/$f" 2>/dev/null || rm -f "prev/$f"; done
+          else
+            echo "Todavía no hay rama datos"
+          fi
+          ls -la prev
+
+      - name: Recoger
+        run: node scripts/datos.mjs out prev
+
+      - name: Publicar en la rama datos
+        run: |
+          cd out
+          printf '# Datos de TrainViewer\n\nGenerados automáticamente por `.github/workflows/datos.yml`. No editar a mano.\n' > README.md
+          git init -q -b datos
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Datos $(date -u +%FT%TZ)"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" datos
