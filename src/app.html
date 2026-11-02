@@ -937,7 +937,8 @@ async function loadRoutes() {
     const m = new Map();
     for (const r of listOf(data)) {
       const id = String(r.idTren ?? r.codComercial ?? r.id ?? '').trim(); if (!id) continue;
-      const stops = (r.estaciones || r.paradas || []).map(s => ({code:norm(s.p ?? s.codEstacion ?? s.cod ?? s.c), time:s.h ?? s.hora ?? s.hs ?? s.hl ?? null})).filter(s => s.code);
+      // h = hora de llegada, hs = hora de salida
+      const stops = (r.estaciones || r.paradas || []).map(s => ({code:norm(s.p ?? s.codEstacion ?? s.cod ?? s.c), time:s.h ?? s.hora ?? s.hl ?? s.hs ?? null, dep:s.hs ?? s.h ?? s.hora ?? null})).filter(s => s.code);
       const path = (r.secuencia || []).map(p => [num(p.lat ?? p.latitud), num(p.lon ?? p.longitud)]).filter(p => p[0] !== null && p[1] !== null && Math.abs(p[0]) <= 90);
       m.set(id, {stops, path});
       for (const s of stops) ensureLiveStation(s.code);
@@ -977,15 +978,16 @@ function ingestFleet(list) {
     [t.origin, t.dest, t.prev, t.next].forEach(ensureLiveStation);
     // Velocidad estimada a partir de posiciones GPS sucesivas
     const last = t.samples[t.samples.length - 1];
+    const fixTime = num(raw.time) ? num(raw.time) * 1000 : now;   // marca de tiempo del GPS (segundos)
     if (!last || hav(last.p, gps) > 30) {
-      t.samples.push({p:gps, t:now});
+      t.samples.push({p:gps, t:fixTime});
       if (t.samples.length > 6) t.samples.shift();
       if (t.samples.length >= 2) {
         const a = t.samples[t.samples.length - 2], b = t.samples[t.samples.length - 1];
         const dt = (b.t - a.t) / 1000;
         if (dt > 5) t.speed = Math.round(clamp(hav(a.p, b.p) / dt * 3.6, 0, 330));
       }
-    } else if (now - last.t > 90000) t.speed = 0;
+    } else if (fixTime - last.t > 90000) t.speed = 0;
     if (hav(t.stillPos, gps) > 150) { t.stillPos = gps; t.stillSince = now; }
     t.stillFor = now - t.stillSince;
     t.nearStation = nearestCatStation(gps).d < 1500;
@@ -1056,7 +1058,7 @@ function liveView(t) {
       stops = r.stops.slice(j, j + 4).map(s => { const sch = parseTime(s.time, now); return sch ? {name:stationName(s.code), est:sch + t.delay * 60000, delay:t.delay} : null; }).filter(Boolean);
     }
   }
-  const nextTime = (stops[0] && stops[0].est) || t.nextTime || null;
+  const nextTime = t.nextTime || (stops[0] && stops[0].est) || null;   // horaLlegadaSigEst ya es la hora estimada
   let code = 'run', status = 'En circulación';
   if (t.held) { code = 'held'; status = `Detenido ${Math.round(t.stillFor / 60000)} min fuera de estación`; }
   else if (t.speed === 0 && t.nearStation) { code = 'dwell'; status = 'Detenido en estación'; }
@@ -1330,12 +1332,10 @@ function boardFor(st) {
       const t = trains.get(id), stops = r.stops;
       const i = stops.findIndex(s => st.codes.has(s.code)); if (i < 0) continue;
       if (t && t.next) { const j = stops.findIndex(s => s.code === t.next); if (j >= 0 && i < j) continue; }
-      const sched = parseTime(stops[i].time, now); if (!sched) continue;
-      const delay = t ? t.delay : 0, est = sched + delay * 60000;
-      if (est < now - 60000) continue;
-      const base = {t, label:t ? t.label : 'Tren', number:id, cat:t ? t.cat : 'md', est, sched, delay};
-      if (i > 0) arr.push({...base, other:stationName(stops[0].code)});
-      if (i < stops.length - 1) dep.push({...base, other:stationName(stops[stops.length - 1].code)});
+      const delay = t ? t.delay : 0, base = {t, label:t ? t.label : 'Tren', number:id, cat:t ? t.cat : 'md', delay};
+      const sArr = parseTime(stops[i].time, now), sDep = parseTime(stops[i].dep, now);
+      if (i > 0 && sArr && sArr + delay * 60000 >= now - 60000) arr.push({...base, sched:sArr, est:sArr + delay * 60000, other:stationName(stops[0].code)});
+      if (i < stops.length - 1 && sDep && sDep + delay * 60000 >= now - 60000) dep.push({...base, sched:sDep, est:sDep + delay * 60000, other:stationName(stops[stops.length - 1].code)});
     }
     if (!live.routes.size) {   // sin recorridos: sólo la próxima estación de cada tren
       for (const t of trains.values()) if (st.codes.has(t.next) && t.nextTime) arr.push({t, label:t.label, number:t.number, cat:t.cat, est:t.nextTime, sched:t.nextTime - t.delay * 60000, delay:t.delay, other:stationName(t.origin)});
