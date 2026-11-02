@@ -561,8 +561,15 @@ function decodePolyline(s) {
   }
   return out;
 }
-const fmtHMS = ms => new Date(ms).toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-const fmtHM  = ms => new Date(ms).toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+// Las horas de Renfe son hora peninsular: se interpretan y se muestran siempre en Europe/Madrid,
+// sea cual sea la zona horaria del navegador.
+const TZ = 'Europe/Madrid';
+const fmtHMS = ms => new Date(ms).toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit', second:'2-digit', timeZone:TZ});
+const fmtHM  = ms => new Date(ms).toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit', timeZone:TZ});
+const tzParts = new Intl.DateTimeFormat('en-US', {timeZone:TZ, hourCycle:'h23', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit'});
+function madridParts(ms) { const p = {}; for (const x of tzParts.formatToParts(ms)) p[x.type] = +x.value || 0; return p; }
+function tzOffset(ms) { const p = madridParts(ms); return Date.UTC(p.year, p.month - 1, p.day, p.hour % 24, p.minute, p.second) - Math.floor(ms / 1000) * 1000; }
+function madridTime(y, mo, d, h, mi, sec = 0) { const g = Date.UTC(y, mo, d, h, mi, sec); return g - tzOffset(g - tzOffset(g)); }
 function fmtCountdown(ms) {
   const m = Math.round(ms / 60000);
   if (m <= 0) return {v:'Ahora', u:'', now:true};
@@ -576,13 +583,15 @@ function parseTime(v, ref = Date.now()) {
   const s = String(v).trim();
   let m = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
   if (m) {
-    const d = new Date(ref); d.setHours(+m[1], +m[2], +(m[3] || 0), 0);
-    let t = d.getTime();
+    const p = madridParts(ref);
+    let t = madridTime(p.year, p.month - 1, p.day, +m[1], +m[2], +(m[3] || 0));
     if (t - ref > 12 * 3600e3) t -= 864e5; else if (ref - t > 12 * 3600e3) t += 864e5;
     return t;
   }
   m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
-  if (m) return new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +(m[6] || 0)).getTime();
+  if (m) return madridTime(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +(m[6] || 0));
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?$/);   // ISO sin zona = hora peninsular
+  if (m) return madridTime(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0));
   if (/^\d{10,13}$/.test(s)) return parseTime(+s, ref);
   const t = Date.parse(s.replace(' ', 'T'));
   return Number.isFinite(t) ? t : null;
@@ -611,6 +620,7 @@ for (const id in ST) {
   STATIONS.set(id, st);
   for (const c of st.codes) CODE2ST.set(c, st);
 }
+const exactName = code => CAT.get(norm(code))?.n || stationName(code);   // p. ej. «Madrid - Chamartín»
 const stationName = code => { const c = norm(code); return CODE2ST.get(c)?.name || CAT.get(c)?.n || (c ? `Estación ${c}` : '—'); };
 
 function buildGeom(A, B, seed) {
@@ -729,7 +739,7 @@ function nextTiles() {
 startTiles();
 
 // Vías: red secundaria tenue debajo, red principal con estado encima
-if (SEC.length) L.polyline(SEC.map(l => l.geom), {pane:'tracks', color:'#33435a', weight:1.4, opacity:.9, interactive:false}).addTo(map);
+if (SEC.length) L.polyline(SEC.map(l => l.geom), {pane:'tracks', color:'#3b4d66', weight:1.5, opacity:.9, interactive:false}).addTo(map);
 const drawOrder = [...EDGES].sort((a, b) => (a.type === 'av') - (b.type === 'av'));
 for (const e of drawOrder) {
   const av = e.type === 'av', w = av ? 3.2 : 2.2;
@@ -1384,8 +1394,8 @@ function boardFor(st) {
       if (t && t.next) { const j = stops.findIndex(s => s.code === t.next); if (j >= 0 && i < j) continue; }
       const delay = t ? t.delay : 0, base = {t, label:t ? t.label : 'Tren', number:id, cat:t ? t.cat : 'md', delay};
       const sArr = parseTime(stops[i].time, now), sDep = parseTime(stops[i].dep, now);
-      if (i > 0 && sArr && sArr + delay * 60000 >= now - 60000) arr.push({...base, sched:sArr, est:sArr + delay * 60000, other:stationName(stops[0].code)});
-      if (i < stops.length - 1 && sDep && sDep + delay * 60000 >= now - 60000) dep.push({...base, sched:sDep, est:sDep + delay * 60000, other:stationName(stops[stops.length - 1].code)});
+      if (i > 0 && sArr && sArr + delay * 60000 >= now - 60000) arr.push({...base, sched:sArr, est:sArr + delay * 60000, other:exactName(stops[0].code)});
+      if (i < stops.length - 1 && sDep && sDep + delay * 60000 >= now - 60000) dep.push({...base, sched:sDep, est:sDep + delay * 60000, other:exactName(stops[stops.length - 1].code)});
     }
     if (!live.routes.size) {   // sin recorridos: sólo la próxima estación de cada tren
       for (const t of trains.values()) if (st.codes.has(t.next) && t.nextTime) arr.push({t, label:t.label, number:t.number, cat:t.cat, est:t.nextTime, sched:t.nextTime - t.delay * 60000, delay:t.delay, other:stationName(t.origin)});
