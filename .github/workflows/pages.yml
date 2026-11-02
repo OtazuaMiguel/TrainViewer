@@ -38,7 +38,8 @@ jobs:
         continue-on-error: true
         run: |
           for f in flotaLD.json trenesConEstacionesLD.json; do
-            if curl -fsSL --retry 2 --max-time 40 -A "TrainViewer (GitHub Pages)" \
+            if curl -fsSL --retry 4 --retry-all-errors --retry-delay 3 --max-time 40 \
+                 -A "Mozilla/5.0 (TrainViewer; +https://github.com/Paticuaker/TrainViewer)" \
                  -o "_site/data/$f" "https://tiempo-real.largorecorrido.renfe.com/renfe-visor/$f"; then
               echo "Descargado $f ($(wc -c < "_site/data/$f") bytes)"
             else
@@ -46,6 +47,20 @@ jobs:
               rm -f "_site/data/$f"
             fi
           done
+
+      - name: Resumen de los datos descargados
+        continue-on-error: true
+        run: |
+          node -e '
+            const fs = require("fs");
+            for (const f of ["flotaLD.json", "trenesConEstacionesLD.json"]) {
+              const p = "_site/data/" + f;
+              if (!fs.existsSync(p)) { console.log(f + ": no disponible"); continue; }
+              const d = JSON.parse(fs.readFileSync(p, "utf8"));
+              const list = Array.isArray(d) ? d : (d.trenes || []);
+              console.log(f + ": claves=" + Object.keys(d).join(",") + " trenes=" + list.length);
+              console.log("  ejemplo: " + JSON.stringify(list[0]).slice(0, 700));
+            }'
 
       - uses: actions/configure-pages@v5
 
