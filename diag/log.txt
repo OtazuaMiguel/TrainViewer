@@ -1,0 +1,218 @@
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/50/61
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/47/63
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/48/62
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/47/62
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/48/63
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/49/60
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/46/62
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/47/61
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/46/63
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/49/61
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/45/63
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/49/65
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/47/60
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/50/60
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/46/60
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/50/65
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/47/64
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/49/63
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/48/61
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/46/65
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/50/63
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/48/64
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/50/62
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/46/64
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/47/65
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/49/62
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/45/61
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/45/65
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/45/62
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/45/60
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/45/64
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/46/61
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/50/64
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/48/65
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/48/60
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/49/64
+[escritorio] console.error: Access to fetch at 'https://tiempo-real.largorecorrido.renfe.com/renfe-visor/flotaLD.json' from origin 'https://paticuaker.github.io' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' 
+[escritorio] FALLO net::ERR_FAILED https://tiempo-real.largorecorrido.renfe.com/renfe-visor/flotaLD.json
+[escritorio] console.error: Failed to load resource: net::ERR_FAILED
+[escritorio] FALLO net::ERR_ABORTED https://api.allorigins.win/raw?url=https%3A%2F%2Ftiempo-real.largorecorrido.renfe.com%2Frenfe-visor%2FflotaLD.json
+[escritorio] FALLO net::ERR_ABORTED https://api.codetabs.com/v1/proxy/?quest=https%3A%2F%2Ftiempo-real.largorecorrido.renfe.com%2Frenfe-visor%2FflotaLD.json
+[escritorio] ESTADO {"conn":"EN DIRECTO · 3 S","total":"159","diag":"Mapa base: Esri gris oscuro\nPosiciones: flotaLD.json · última 20:56:56\nRecorridos: 159 trenes · 20:56\nHorario oficial: 1429 trenes · 20:31","tiles":36,"bodyText":null}
+[escritorio] OFICIAL 14 avisos · 34 trazos · semana: 25% 50% 75% mar 27 – mié 28 – jue 29 – vie 30 – sáb 31 – dom 1 – lun 2 40% 6 muestras · desde 2 nov 18:45 38 % ahora
+[escritorio] MOVIMIENTO 131/224 trenes se han movido en 2 s · conexión: EN DIRECTO · 5 S
+[escritorio] FOCO true
+[escritorio] FICHA Volver | MD | Nº 18909 | Madrid - Príncipe Pio → Salamanca | Media Distancia | · Material 599007 | · actualizado hace 8 s | VELOCIDAD | ≈79km/h | RETRASO | +9min | PRÓXIMA | Ávila | 21:21 | En circulación | Seguir en el mapa | Ver recorrido | 2 paradas anteriores | El Escorial | 20:21 | Ávila | 21:10 | 21:19 | Peñaranda de Bracamonte | 22:00 | 22:09 | Salamanca | 22:25 | 22:34 | Salamanca - La Alamedilla | 22:30 | 22:39 | Material 599007 · Renfe 20:56:43
+[escritorio] BUSQUEDA "00808": Intercity 808 · sin datos en directo · Pamplona/Iruña → Madrid Pta.Atocha - Almudena Grandes · 18:23–22:00 · MD 18083 · Alicante → Ciudad Real · Avant 8085 · programado · Sevilla - Santa Justa → Málaga Maria Zambrano · mañana 07:51–10:02 · Avant 8081 · afectado por corte · Puertollano → Madrid Pta.Atocha - Almudena Grandes · mañana 08:05–09:24 · Avant 8080 · afectado por corte · Madrid Pta.Atocha 
+[escritorio] BUSQUEDA "Pamplona Madrid": VIAJES PAMPLONA → MADRID · Intercity 808 · sin datos · 18:23 → 22:00 · Alvia 610 · sin datos · 19:32 → 23:22 · Alvia 802 · programado · mañana 06:32 → 10:18 · Alvia 800 · programado · mañana 08:08 → 11:57 · Alvia 602 · programado · mañana 12:10 → 16:04 · Alvia 606 · programado · mañana 15:05 → 18:45 · Alvia 610 · programado · mañana 19:32 → 23:22
+[escritorio] BUSQUEDA "A Coruña Madrid": VIAJES A CORUÑA → MADRID · AVE 04404 · en circulación · 19:37 → 23:11 +4′ · AVLO 4154 · programado · mañana 05:14 → 08:49 · AVE 4364 · programado · mañana 07:10 → 10:45 · AVE 4314 · programado · mañana 11:15 → 14:50 · AVLO 4334 · programado · mañana 15:54 → 19:51 · AVE 4404 · programado · mañana 19:33 → 23:07
+[escritorio] SIN GPS 65 trenes con posición estimada · con GPS 159
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/95/126
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/94/126
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/96/126
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/95/125
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/94/125
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/95/127
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/96/125
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/95/124
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/94/127
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/96/127
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/97/126
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/95/128
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/94/124
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/96/124
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/94/128
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/93/126
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/97/125
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/96/128
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/97/127
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/93/125
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/97/124
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/93/127
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/97/128
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/95/123
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/93/128
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/93/124
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/94/123
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/95/129
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/96/123
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/94/129
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/97/123
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/93/123
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/96/129
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/97/129
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/93/129
+[escritorio] 808 en el mapa: 1 · Volver | INTERCITY | Nº 808 | Pamplona/Iruña → Madrid Pta.Atocha - Almudena Grandes | Larga Distancia | VELOCIDAD | ≈114km/h | RETRASO | 0min | PRÓXIMA | Madrid Pta.Atocha - Almudena Grandes | 22:00 | Sin GPS de Renfe: posición estimada según el horario (puede ir con retraso) | Seguir en el mapa | V
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/192/251
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/193/251
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/192/250
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/193/250
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/193/252
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/191/251
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/192/252
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/194/251
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/191/250
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/194/250
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/191/252
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/192/249
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/193/249
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/194/252
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/192/253
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/191/249
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/194/249
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/191/253
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/190/251
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/195/251
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/193/253
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/195/250
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/190/250
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/190/252
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/194/253
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/192/248
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/195/252
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/193/248
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/195/249
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/190/249
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/190/253
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/192/254
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/193/254
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/191/248
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/194/248
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/195/253
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/195/248
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/191/254
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/190/248
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/194/254
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/190/254
+[escritorio] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/195/254
+[escritorio] ESTACION Volver | Madrid Pta.Atocha - Almudena Grandes | Código 60000 | Renfe · tiempo real + horario oficial | · Madrid | PRÓXIMAS LLEGADAS | 11 | MIN | De Toledo | Avant 8203 · | en circulación | 20:59 | 21:08 +9 | 18 | MIN | De Puertollano | Avant 35181 · | afectado por corte | 21:15 | 34 | MIN | De Barcelona - Sants | AVE 3180 · | en circulación | 21:27 | 21:31 +4 | 41 | MIN | De Jaén | MD 18037 · | en circulación | 21:08 | 21:38 +30 | 44 | MIN | De Madrid - Chamartín - Clara Campoamor | MD 17000 · | programado | 21:41 | 49 | MIN | De Sevilla - Santa Justa | AVLO 2187 · | afectado por corte | 21:46 | 51 | MIN | De Barcelona - Sants | AVE 3182 · | en circulación | 21:44 | 21:48 +4 | 56 | MIN | De 
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/5/13/14
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/5/13/15
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/5/13/16
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/5/10/15
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/5/10/14
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/5/12/16
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/5/11/16
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/5/10/16
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/5/11/15
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/5/12/14
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/5/11/14
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/5/12/15
+[movil] console.error: Access to fetch at 'https://tiempo-real.largorecorrido.renfe.com/renfe-visor/flotaLD.json' from origin 'https://paticuaker.github.io' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' 
+[movil] FALLO net::ERR_FAILED https://tiempo-real.largorecorrido.renfe.com/renfe-visor/flotaLD.json
+[movil] console.error: Failed to load resource: net::ERR_FAILED
+[movil] FALLO net::ERR_ABORTED https://api.allorigins.win/raw?url=https%3A%2F%2Ftiempo-real.largorecorrido.renfe.com%2Frenfe-visor%2FflotaLD.json
+[movil] FALLO net::ERR_ABORTED https://api.codetabs.com/v1/proxy/?quest=https%3A%2F%2Ftiempo-real.largorecorrido.renfe.com%2Frenfe-visor%2FflotaLD.json
+[movil] ESTADO {"conn":"En directo · 4 s","total":"158","diag":"Mapa base: Esri gris oscuro\nPosiciones: flotaLD.json · última 20:57:32\nRecorridos: 158 trenes · 20:57\nHorario oficial: 1429 trenes · 20:31","tiles":12,"bodyText":null}
+[movil] OFICIAL 14 avisos · 34 trazos · semana: 25% 50% 75% mar 27 – mié 28 – jue 29 – vie 30 – sáb 31 – dom 1 – lun 2 40% 6 muestras · desde 2 nov 18:45 39 % ahora
+[movil] MOVIMIENTO 141/223 trenes se han movido en 2 s · conexión: En directo · 6 s
+[movil] BUSQUEDA "00808": Intercity 808 · sin datos en directo · Pamplona/Iruña → Madrid Pta.Atocha - Almudena Grandes · 18:23–22:00 · MD 18083 · Alicante → Ciudad Real · Avant 8085 · programado · Sevilla - Santa Justa → Málaga Maria Zambrano · mañana 07:51–10:02 · Avant 8081 · afectado por corte · Puertollano → Madrid Pta.Atocha - Almudena Grandes · mañana 08:05–09:24 · Avant 8080 · afectado por corte · Madrid Pta.Atocha 
+[movil] BUSQUEDA "Pamplona Madrid": VIAJES PAMPLONA → MADRID · Intercity 808 · sin datos · 18:23 → 22:00 · Alvia 610 · sin datos · 19:32 → 23:22 · Alvia 802 · programado · mañana 06:32 → 10:18 · Alvia 800 · programado · mañana 08:08 → 11:57 · Alvia 602 · programado · mañana 12:10 → 16:04 · Alvia 606 · programado · mañana 15:05 → 18:45 · Alvia 610 · programado · mañana 19:32 → 23:22
+[movil] BUSQUEDA "A Coruña Madrid": VIAJES A CORUÑA → MADRID · AVE 04404 · en circulación · 19:37 → 23:11 +4′ · AVLO 4154 · programado · mañana 05:14 → 08:49 · AVE 4364 · programado · mañana 07:10 → 10:45 · AVE 4314 · programado · mañana 11:15 → 14:50 · AVLO 4334 · programado · mañana 15:54 → 19:51 · AVE 4404 · programado · mañana 19:33 → 23:07
+[movil] SIN GPS 65 trenes con posición estimada · con GPS 158
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/6/24/31
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/6/25/31
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/6/23/30
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/6/23/31
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/6/24/30
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/6/24/32
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/6/23/32
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/6/22/31
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/6/25/32
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/6/25/30
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/6/26/31
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/6/22/30
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/6/26/32
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/6/26/30
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/6/22/32
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/48/63
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/48/64
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/47/63
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/47/62
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/49/63
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/48/62
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/47/64
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/49/64
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/46/63
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/49/62
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/50/63
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/46/62
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/46/64
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/50/62
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/50/64
+[movil] 808 en el mapa: 1 · Volver | INTERCITY | Nº 808 | Pamplona/Iruña → Madrid Pta.Atocha - Almudena Grandes | Larga Distancia | VELOCIDAD | ≈114km/h | RETRASO | 0min | PRÓXIMA | Madrid Pta.Atocha - Almudena Grandes | 22:00 | Sin GPS de Renfe: posición estimada según el horario (puede ir con retraso) | Seguir en el mapa | V
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/96/125
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/96/126
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/97/125
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/96/124
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/97/126
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/97/124
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/95/125
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/98/125
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/95/124
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/95/126
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/98/124
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/98/126
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/94/125
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/94/126
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/94/124
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/99/125
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/99/124
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/8/99/126
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/193/250
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/193/251
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/194/250
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/192/249
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/192/250
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/193/249
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/192/251
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/194/251
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/195/250
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/191/249
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/191/250
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/194/249
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/191/251
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/195/249
+[movil] 200 image/jpeg https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/9/195/251
+[movil] ESTACION Volver | Madrid Pta.Atocha - Almudena Grandes | Código 60000 | Renfe · tiempo real + horario oficial | · Madrid | PRÓXIMAS LLEGADAS | 10 | MIN | De Toledo | Avant 8203 · | en circulación | 20:59 | 21:08 +9 | 17 | MIN | De Puertollano | Avant 35181 · | afectado por corte | 21:15 | 33 | MIN | De Barcelona - Sants | AVE 3180 · | en circulación | 21:27 | 21:31 +4 | 40 | MIN | De Jaén | MD 18037 · | en circulación | 21:08 | 21:38 +30 | 43 | MIN | De Madrid - Chamartín - Clara Campoamor | MD 17000 · | programado | 21:41 | 48 | MIN | De Sevilla - Santa Justa | AVLO 2187 · | afectado por corte | 21:46 | 50 | MIN | De Barcelona - Sants | AVE 3182 · | en circulación | 21:44 | 21:48 +4 | 55 | MIN | De 
