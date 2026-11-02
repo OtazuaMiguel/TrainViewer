@@ -34,6 +34,28 @@ jobs:
             body=""; case "$out" in *image*) ;; *) body=" cuerpo=$(head -c 160 /tmp/t | tr '\n' ' ')";; esac
             echo "$out $u$body"; mkdir -p diag/tiles; cp /tmp/t "diag/tiles/$n.img"
           done
+      - name: Medir la frescura de los datos (proxy de Supabase)
+        continue-on-error: true
+        run: |
+          node -e '
+            const U = "https://dyxrgskqftlxetcgoebp.supabase.co/functions/v1/renfe-proxy?f=flota";
+            let prev = null, prevFecha = null;
+            (async () => {
+              for (let i = 0; i < 30; i++) {
+                const t0 = Date.now();
+                try {
+                  const r = await fetch(U); const j = await r.json();
+                  const pos = new Map((j.trenes || []).map(t => [t.codComercial, t.latitud + "," + t.longitud + "," + t.time]));
+                  let moved = 0; if (prev) for (const [k, v] of pos) if (prev.get(k) !== v) moved++;
+                  const times = (j.trenes || []).map(t => +t.time).filter(Boolean);
+                  const newest = Math.max(...times), age = Math.round(Date.now() / 1000 - newest);
+                  console.log(`${new Date().toISOString().slice(11, 19)} ${r.status} ${Date.now() - t0}ms cache=${r.headers.get("x-cache")} fecha=${j.fechaActualizacion}${j.fechaActualizacion !== prevFecha ? " (NUEVA)" : ""} trenes=${pos.size} cambiados=${moved} gps_mas_reciente_hace=${age}s cors=${r.headers.get("access-control-allow-origin")}`);
+                  prev = pos; prevFecha = j.fechaActualizacion;
+                } catch (e) { console.log("error", e.message); }
+                await new Promise(r => setTimeout(r, 3000));
+              }
+            })();'
+
       - name: Abrir la web en Chromium
         run: |
           npm i --no-save playwright@1.49.1 >/dev/null
