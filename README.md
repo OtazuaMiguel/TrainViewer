@@ -12,6 +12,12 @@ Mapa ferroviario de España en tiempo real: trenes de Alta Velocidad, Larga Dist
 - **Modo foco**: al seleccionar un tren, o buscar un viaje como «Madrid Sevilla», solo su trayecto queda en color, siguiendo las vías reales y con sus paradas; el resto del mapa pasa a blanco y negro.
 - **Puntualidad de los últimos 7 días**: gráfica con la media de cada día, a partir del histórico que se guarda cada 15 min.
 - **Estaciones**: al pulsar una se ven las próximas llegadas y salidas con cuenta atrás, hora programada, hora estimada y retraso. El botón **Más información** abre el panel oficial de Adif (`info.adif.es/?s=<código>`).
+- **Versión móvil** pensada para el dedo:
+  - Mapa a pantalla completa con buscador flotante y botón «estación más cercana», que usa tu ubicación.
+  - Panel inferior que se arrastra o se toca para pasar entre tres alturas.
+  - Botones y filas grandes, texto que no provoca zoom en iPhone y márgenes para el notch.
+  - El botón «atrás» del móvil cierra la ficha abierta.
+  - Al elegir un tren o una estación, el mapa los encuadra en la parte visible.
 - **Barra lateral** con buscador, indicadores (puntualidad, retraso medio, incidencias), filtros por tipo de tren, lista de trenes y registro de incidencias.
 - **Modo simulación** de respaldo si no hay conexión con los datos de Renfe (incluye trenes de mercancías, que no tienen datos públicos).
 

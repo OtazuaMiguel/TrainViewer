@@ -2,7 +2,13 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05080d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TrainViewer">
+<meta name="description" content="Mapa ferroviario de España en tiempo real: trenes, incidencias oficiales de Adif y llegadas y salidas por estación.">
 <title>TrainViewer · Red ferroviaria</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -10,6 +16,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
+  --sa-t:env(safe-area-inset-top,0px); --sa-b:env(safe-area-inset-bottom,0px);
   --bg:#05080d; --panel:#0a0f18; --panel-2:#0f1622; --panel-3:#141d2b; --line:#182131; --line-2:#243146;
   --text:#e7edf5; --muted:#8a98ad; --dim:#56657b;
   --ok:#22c55e; --warn:#facc15; --crit:#ef4444; --info:#38bdf8; --late:#fb923c;
@@ -43,7 +50,11 @@ a{color:var(--info)}
 .search{position:relative}
 .search input{width:100%;background:var(--panel-2);border:1px solid var(--line-2);border-radius:9px;padding:8px 10px 8px 32px;outline:none;transition:border-color .15s}
 .search input:focus{border-color:#3b4d68}
-.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--dim)}
+.search>svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--dim);z-index:1;pointer-events:none}
+.search input::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none}
+.qclear{position:absolute;right:40px;top:50%;transform:translateY(-50%);width:28px;height:28px;border:0;border-radius:50%;background:none;color:var(--muted);display:none;place-items:center;cursor:pointer}
+.search.has .qclear{display:grid}
+.qclear:hover{color:var(--text);background:var(--panel-3)}
 #results{position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--panel-2);border:1px solid var(--line-2);border-radius:10px;box-shadow:0 14px 40px rgba(0,0,0,.6);overflow:hidden;display:none;z-index:5}
 #results.open{display:block}
 #results button{display:flex;width:100%;align-items:center;gap:9px;padding:8px 11px;background:none;border:0;text-align:left;cursor:pointer;border-top:1px solid var(--line)}
@@ -363,20 +374,95 @@ body:not(.mode-sim) .sim-only{display:none!important}
 @keyframes held{50%{stroke-opacity:.25}}
 @keyframes slide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 
+/* ---------- Móvil: mapa a pantalla completa + barra flotante + panel inferior deslizable ---------- */
+.grab,.msum{display:none}
+.locate{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:8px;border:0;background:none;color:var(--muted);display:grid;place-items:center;cursor:pointer}
+.locate:hover{color:var(--text);background:var(--panel-3)}
+.search input{padding-right:40px}
 @media (max-width:820px){
-  body{grid-template-columns:1fr;grid-template-rows:55vh 1fr;grid-template-rows:55dvh 1fr}
-  #map{grid-row:1}
-  #panel{grid-row:2;border-right:0;border-top:1px solid var(--line)}
-  .legend,.banner.on{display:none}
-  .top{padding:10px 14px}
-  .brand p{display:none}
+  html,body{overscroll-behavior:none}
+  body{display:block;height:100dvh;overflow:hidden}
+  #map{position:fixed;inset:0;height:auto;z-index:0}
+  .top.mtop{position:fixed;z-index:1200;left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));padding:0;border:0;display:block}
+  .mtop .brand{display:none}
+  .mtop .search input{height:50px;font-size:16px;border-radius:15px;padding:0 54px 0 44px;background:rgba(13,19,30,.95);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:0 10px 30px rgba(0,0,0,.55);border-color:#2a3a52}
+  .mtop .search>svg{left:16px;width:18px;height:18px;color:var(--muted)}
+  .mtop .qclear{right:52px;width:36px;height:36px}
+  .mtop .locate{right:6px;width:40px;height:40px;border-radius:11px;background:var(--panel-3);color:var(--info)}
+  .mtop #results{top:calc(100% + 6px);max-height:62dvh;overflow-y:auto;border-radius:15px}
+  .mtop #results button{min-height:52px;font-size:15px;padding:10px 14px}
+  .mtop #results small{font-size:12px}
+  #panel{position:fixed;z-index:1100;left:0;right:0;bottom:0;height:calc(100dvh - 72px - env(safe-area-inset-top));
+    border:1px solid #26344b;border-bottom:0;border-radius:22px 22px 0 0;box-shadow:0 -14px 44px rgba(0,0,0,.6);
+    transform:translate3d(0,var(--sheet-y,calc(100% - 112px)),0);transition:transform .36s cubic-bezier(.2,.85,.25,1);will-change:transform;
+    padding-bottom:env(safe-area-inset-bottom);overflow:hidden}
+  #panel.drag{transition:none}
+  .grab{display:flex;justify-content:center;align-items:center;flex:none;height:24px;width:100%;background:none;border:0;cursor:grab;touch-action:none}
+  .grab i{width:42px;height:5px;border-radius:99px;background:#3b4b66}
+  .msum{display:flex;align-items:center;gap:10px;flex:none;min-height:38px;padding:0 18px 8px;font-size:13.5px;color:var(--muted);touch-action:none;cursor:pointer;user-select:none}
+  .msum b{color:var(--text);font-weight:600}
+  .msum .dot{width:8px;height:8px;border-radius:50%;background:var(--dim);flex:none}
+  .msum .dot.live{background:var(--ok);box-shadow:0 0 0 4px rgba(34,197,94,.16)}
+  .msum .dot.sim{background:var(--warn)} .msum .dot.err{background:var(--crit)}
+  .msum .sp{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .msum .chev{flex:none;color:var(--dim);transition:transform .3s}
+  #panel[data-sheet="full"] .msum .chev{transform:rotate(180deg)}
+  .tabs{touch-action:none;padding:0 8px}
+  .tabs button{min-height:48px;font-size:14.5px}
+  .tabs .cnt{font-size:11.5px}
+  .body{touch-action:pan-y}
+  .sec{padding:16px 18px}
+  .sec-title{font-size:11px}
+  .kpi{padding:11px 12px} .kpi small{font-size:10.5px} .kpi b{font-size:19px}
+  .row{min-height:60px;padding:11px 18px}
+  .row .t1{font-size:14px} .row .t2{font-size:12.5px}
+  .brow{min-height:62px;padding:11px 18px}
+  .brow .who b{font-size:14px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25}
+  .tl-row{min-height:46px} .tl-name{font-size:13.5px}
+  .off-row{min-height:54px} .off-main b{font-size:13.5px}
+  #log li{padding:11px 18px 11px 16px}
+  #log .t{font-size:13.5px} #log .dd{font-size:12.5px}
+  .flt{padding:11px 0;font-size:15px;gap:12px}
+  .flt input{width:46px;height:28px}
+  .flt input::before{width:22px;height:22px;top:3px;left:3px}
+  .flt input:checked::before{transform:translateX(18px)}
+  .tl-tools input,.tl-tools select{font-size:16px;min-height:44px;border-radius:10px}
+  .foot summary{min-height:50px;font-size:13px}
+  .foot select,.foot input[type=text]{font-size:16px;min-height:44px}
+  .st-head{padding:12px 18px}
+  .st-head .back{font-size:14.5px;padding:8px 10px 8px 0;margin-bottom:6px}
+  .st-head h2{font-size:21px}
+  .tv-stats{padding:14px 18px 4px} .tv-stats b{font-size:21px}
+  .tv-actions{padding:12px 18px 4px}
+  .btn{min-height:48px;font-size:14.5px;border-radius:12px}
+  .btn.sm{min-height:46px;font-size:14px}
+  .leaflet-control-zoom{display:none}
+  .leaflet-top{top:calc(70px + env(safe-area-inset-top))}
+  .leaflet-bottom{bottom:var(--peek-h,112px)}
+  .leaflet-control-attribution{font-size:9px!important;max-width:70vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .legend{display:block;max-width:230px;font-size:12px;padding:9px 11px}
+  .legend.min{padding:8px 11px}
+  .banner.on{display:none}
+  #toast{bottom:calc(var(--sheet-vis,112px) + 14px);max-width:calc(100vw - 32px);text-align:center}
+  .leaflet-tooltip.st-label{font-size:11px}
+  #map:not(.z7) .leaflet-tooltip.st-major:not(.st-top):not(.st-focus){display:none}
+  .dark-popup .leaflet-popup-content{margin:13px 14px 12px}
+  .leaflet-popup-close-button{width:32px!important;height:32px!important;font-size:22px!important}
 }
+@media (max-width:820px) and (prefers-reduced-motion:reduce){#panel{transition:none}}
+/* Objetivos táctiles más grandes para los trenes */
+.tmk.touch .tdot{width:34px;height:34px}
+.tmk.touch .tdot .core{left:11px;top:11px;width:12px;height:12px}
+.tmk.touch .tdot .hd{inset:4px}
+
 @media (prefers-reduced-motion:reduce){*{animation-duration:0s!important;transition:none!important}}
 </style>
 </head>
 <body class="mode-wait">
 
 <aside id="panel" aria-label="Panel de control">
+  <button class="grab" id="grab" aria-label="Mostrar u ocultar el panel" aria-expanded="false"><i></i></button>
+  <div class="msum" id="msum" role="button" tabindex="0" aria-label="Resumen; toca para desplegar el panel"></div>
   <div class="top">
     <div class="brand">
       <div class="logo" aria-hidden="true">
@@ -394,6 +480,8 @@ body:not(.mode-sim) .sim-only{display:none!important}
     <div class="search">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input id="q" type="search" placeholder="Estación, tren o viaje (Sevilla · 03061 · Madrid Barcelona)" autocomplete="off" aria-label="Buscar estación o tren">
+      <button class="qclear" id="qclear" aria-label="Borrar búsqueda"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <button class="locate" id="locate" aria-label="Estación más cercana a mi ubicación" title="Estación más cercana a mí"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="8"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></svg></button>
       <div id="results" role="listbox"></div>
     </div>
   </div>
@@ -878,10 +966,11 @@ for (const e of drawOrder) {
 
 // Estaciones (clic -> panel de llegadas y salidas)
 function addStationMarker(st) {
-  const r = st.major ? 5 : st.net ? 3.6 : 2.6;
+  const r = (st.major ? 5 : st.net ? 3.6 : 2.6) + (matchMedia('(pointer:coarse)').matches ? 1.5 : 0);
+  const top = ['MAD','BCN','VLC','SEV','BIL','COU','MAL','ZAR','VAL','ALC','BAD','GRA','LEO'].includes(st.id);
   st.marker = L.circleMarker(st.c, {pane:'stations', radius:r, color:st.major ? '#e2e8f0' : st.net ? '#94a3b8' : '#64748b', weight:1.5,
                                     fillColor:'#0a0f18', fillOpacity:1, className:'stn', bubblingMouseEvents:false})
-    .bindTooltip(esc(st.name), {permanent:true, direction:'right', offset:[5, 0], className:'st-label ' + (st.major ? 'st-major' : st.net ? 'st-minor' : 'st-extra')})
+    .bindTooltip(esc(st.name), {permanent:true, direction:'right', offset:[5, 0], className:'st-label ' + (st.major ? 'st-major' : st.net ? 'st-minor' : 'st-extra') + (top ? ' st-top' : '')})
     .on('click', () => openStation(st))
     .addTo(map);
 }
@@ -952,12 +1041,13 @@ const SmoothMarker = L.Marker.extend({
   update() { if (this._icon && this._map) this._setPos(this._map.project(this._latlng)._subtract(this._map.getPixelOrigin())); return this; },
 });
 const ICONS = {};
-for (const c in CAT_COLOR) ICONS[c] = L.divIcon({className:'tmk', iconSize:[24, 24], iconAnchor:[12, 12],
+const TOUCH = matchMedia('(pointer:coarse)').matches;
+for (const c in CAT_COLOR) ICONS[c] = L.divIcon({className:'tmk' + (TOUCH ? ' touch' : ''), iconSize:TOUCH ? [34, 34] : [24, 24], iconAnchor:TOUCH ? [17, 17] : [12, 12],
   html:`<div class="tdot" style="--c:${CAT_COLOR[c]}"><i class="hd"></i><i class="core"></i></div>`});
 function createMarker(t) {
   t.marker = new SmoothMarker(t.pos, {icon:ICONS[t.cat], pane:'trains', keyboard:false, bubblingMouseEvents:false});
   t.marker.bindTooltip(() => trainTip(t), {className:'ttip', direction:'top', offset:[0, -10], opacity:1});
-  t.marker.on('click', () => selectTrain(t));
+  t.marker.on('click', () => MQ.matches ? focusTrain(t) : selectTrain(t));
   t.marker.on('add', () => { const el = t.marker.getElement(); t.dotEl = el.firstChild; t.hdEl = el.querySelector('.hd'); t.styleKey = null; t.lastAng = null; if (state.selected === t) el.classList.add('focused'); styleTrain(t); });
   t.hdRef = t.pos; t.ang = null;
   groups[t.cat].addLayer(t.marker);
@@ -1102,15 +1192,15 @@ function clearFocus(t) {
   if (t) { const el = t.marker.getElement(); if (el) el.classList.remove('focused'); t.focusPath = t.focusDone = t.focusAhead = null; }
 }
 
-function closeTrain() { deselect(); showView(state.station ? 'station' : state.tab); if (state.station) renderStation(); }
+function closeTrain(fromPop) { deselect(); if (!fromPop && !state.station) popSheetHistory(); showView(state.station ? 'station' : state.tab); if (state.station) renderStation(); else if (MQ.matches) setSheet('peek'); }
 function focusTrain(t, trip) {
   if (!t || !trains.has(t.id)) { toast('Ese tren ya no está en circulación'); return; }
   const cb = document.querySelector(`input[data-cat="${t.cat}"]`);
   if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
   selectTrain(t, trip);
   const p = t.focusPath;
-  if (p && p.length > 1) map.flyToBounds(L.latLngBounds(p).extend(t.pos), {padding:[40, 40], maxZoom:10, duration:.9});
-  else map.flyTo(t.pos, Math.max(map.getZoom(), 9), {duration:.9});
+  if (p && p.length > 1) map.flyToBounds(L.latLngBounds(p).extend(t.pos), {...viewPad(), maxZoom:10, duration:.9});
+  else { const z = Math.max(map.getZoom(), 9); map.flyTo(centerFor(t.pos, z), z, {duration:.9}); }
 }
 
 // Ficha del tren en la barra lateral: datos principales y recorrido completo con horas
@@ -1175,13 +1265,13 @@ function renderTrainView(scrollToNext) {
   $('tv-back').onclick = closeTrain;
   $('tv-follow').onclick = () => {
     state.follow = !state.follow; state.followReady = false;
-    if (state.follow) { map.flyTo(t.pos, Math.max(map.getZoom(), 10), {duration:.8}); map.once('moveend', () => { state.followReady = true; }); }
+    if (state.follow) { const z = Math.max(map.getZoom(), 10); map.flyTo(centerFor(t.pos, z), z, {duration:.8}); map.once('moveend', () => { state.followReady = true; }); }
     renderTrainView();
   };
-  $('tv-fit').onclick = () => { state.follow = false; const p = routePathOf(t); if (p && p.length > 1) map.flyToBounds(L.latLngBounds(p), {padding:[50, 50], duration:.8}); renderTrainView(); };
+  $('tv-fit').onclick = () => { state.follow = false; const p = routePathOf(t); if (p && p.length > 1) map.flyToBounds(L.latLngBounds(p), {...viewPad(50), duration:.8}); renderTrainView(); };
   if (tl) el.querySelectorAll('.tl-row').forEach(b => b.onclick = () => {
     const s = tl[+b.dataset.i], st = s.id ? STATIONS.get(s.id) : CODE2ST.get(s.code);
-    if (st) { closeTrain(); map.flyTo(st.c, Math.max(map.getZoom(), 9), {duration:.8}); openStation(st, false); }
+    if (st) { deselect(); openStation(st, false); const z = Math.max(map.getZoom(), 9); map.flyTo(centerFor(st.c, z), z, {duration:.8}); }
   });
   const more = $('tl-more'); if (more) more.onclick = () => { state.showPassed = true; renderTrainView(); };
   if (scrollToNext) el.scrollTop = 0;
@@ -1756,7 +1846,7 @@ function openStation(st, pan = true) {
   if (pan && st.marker) map.panTo(st.c, {animate:true});
   renderStation();
 }
-function closeStation() { state.station = null; showView(state.tab); }
+function closeStation(fromPop) { state.station = null; if (!fromPop) popSheetHistory(); showView(state.tab); if (MQ.matches) setSheet('peek'); }
 function renderStation() {
   const st = state.station; if (!st) return;
   const b = boardCache = boardFor(st);
@@ -1798,8 +1888,13 @@ function showView(v) {
   if (v !== 'station' && v !== 'train') state.tab = v;
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === v));
   if (v === 'trenes') renderTrainList();
+  if (MQ.matches && (v === 'train' || v === 'station')) { pushSheetHistory(); if (sheet.state === 'peek') setSheet('half'); }
+  updateDashboard();
 }
-document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { state.station = null; if (state.selected) deselect(); showView(b.dataset.tab); });
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  state.station = null; if (state.selected) deselect(); popSheetHistory();
+  showView(b.dataset.tab); if (MQ.matches && sheet.state === 'peek') setSheet('half');
+});
 
 const logEl = $('log'); let logTotal = 0;
 function addLog(level, title, detail, ref) {
@@ -1814,7 +1909,7 @@ function addLog(level, title, detail, ref) {
   $('l-cnt').textContent = ++logTotal;
 }
 function focusEdge(e) {
-  map.flyToBounds(L.latLngBounds(e.geom), {padding:[70, 70], maxZoom:9, duration:.8});
+  map.flyToBounds(L.latLngBounds(e.geom), {...viewPad(70), maxZoom:9, duration:.8});
   map.once('moveend', () => e.glow.openPopup(e.geom[Math.floor(e.geom.length / 2)]));
 }
 
@@ -1912,12 +2007,14 @@ function doSearch() {
 }
 function choose(i) {
   const r = results[i]; if (!r) return;
-  qEl.value = ''; resEl.classList.remove('open'); qEl.blur();
-  if (r.kind === 'st') { map.flyTo(r.s.c, Math.max(map.getZoom(), 9), {duration:.8}); openStation(r.s, false); }
+  qEl.value = ''; qEl.parentElement.classList.remove('has'); resEl.classList.remove('open'); qEl.blur();
+  if (r.kind === 'st') { openStation(r.s, false); const z = Math.max(map.getZoom(), 9); map.flyTo(centerFor(r.s.c, z), z, {duration:.8}); }
   else if (r.kind === 'trip') focusTrain(r.t, r.trip);
   else focusTrain(r.t);
 }
-qEl.oninput = doSearch;
+qEl.oninput = () => { qEl.parentElement.classList.toggle('has', !!qEl.value); doSearch(); };
+$('qclear').addEventListener('mousedown', e => e.preventDefault());
+$('qclear').onclick = () => { qEl.value = ''; qEl.parentElement.classList.remove('has'); resEl.classList.remove('open'); qEl.focus(); };
 qEl.onkeydown = e => {
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); hl = clamp(hl + (e.key === 'ArrowDown' ? 1 : -1), 0, results.length - 1); resEl.querySelectorAll('button').forEach((b, i) => b.classList.toggle('hl', i === hl)); }
   else if (e.key === 'Enter') choose(hl);
@@ -1997,6 +2094,7 @@ function updateDashboard() {
   for (const s in km) { $('nb-' + s).style.width = (km[s] / TOTAL_KM * 100) + '%'; $('nl-' + s).textContent = nf.format(Math.round(km[s])) + ' km'; }
   $('net-total').textContent = nf.format(Math.round(TOTAL_KM)) + ' km';
   updateConn();
+  renderMsum(n, n ? Math.round(onTime / n * 100) + ' %' : '–', inc);
   if (state.view === 'train' && state.selected) { renderTrainView(); updateFocusSplit(); }
   pushHistory(n ? onTime / n * 100 : null, n ? sum / n : null);
 }
@@ -2053,7 +2151,8 @@ function focusOfficial(it) {
   const parts = official.overlays.filter(o => o.item === it.id);
   if (!parts.length) { if (it.url) window.open(it.url, '_blank', 'noopener'); return; }
   const b = L.latLngBounds(parts.flatMap(o => o.coords));
-  map.flyToBounds(b, {padding:[60, 60], maxZoom:10, duration:.8});
+  if (MQ.matches) setSheet('peek');
+  map.flyToBounds(b, {...viewPad(60), maxZoom:10, duration:.8});
   map.once('moveend', () => L.popup({className:'dark-popup', minWidth:290, maxWidth:300}).setLatLng(parts[0].coords[Math.floor(parts[0].coords.length / 2)]).setContent(officialHTML(it)).openOn(map));
 }
 function renderOfficialList() {
@@ -2094,6 +2193,134 @@ function renderWeek() {
   el.innerHTML = `<svg viewBox="0 0 ${W} ${top + H + 28}" aria-label="Puntualidad de los últimos 7 días">${grid}${sep}${area}${lines}${last ? `<circle cx="${x(last.t).toFixed(1)}" cy="${y(last.p).toFixed(1)}" r="3.2" class="wk-now"/>` : ''}${labels}</svg>
     <div class="spark-ax">${S.length ? `<span>${S.length} muestras · desde ${new Date(S[0].t).toLocaleDateString('es-ES', {day:'numeric', month:'short', timeZone:TZ})} ${fmtHM(S[0].t)}</span><span>${last ? Math.round(last.p) + ' % ahora' : ''}</span>` : '<span>Recogiendo datos: la gráfica se irá completando a lo largo de la semana</span>'}</div>`;
 }
+
+/* =====================================================================
+   10c. MÓVIL — panel inferior deslizable (mínimo / medio / completo)
+   ===================================================================== */
+const MQ = matchMedia('(max-width:820px)');
+const panelEl = $('panel'), topEl = document.querySelector('.top'), tabsEl = document.querySelector('.tabs');
+const sheet = {state:'peek'};
+const safe = side => { const v = getComputedStyle(document.documentElement).getPropertyValue('--sa-' + side); return parseFloat(v) || 0; };
+function sheetMetrics() {
+  const H = panelEl.offsetHeight, peekH = 112 + safe('b');
+  return {H, peekH, peek:H - peekH, half:Math.max(0, H - Math.round(innerHeight * 0.5)), full:0};
+}
+function visibleSheet() { if (!MQ.matches) return 0; const m = sheetMetrics(); return m.H - m[sheet.state]; }
+function setSheet(st) {
+  if (!MQ.matches) return;
+  sheet.state = st;
+  const m = sheetMetrics();
+  panelEl.style.setProperty('--sheet-y', m[st] + 'px');
+  panelEl.dataset.sheet = st;
+  $('grab').setAttribute('aria-expanded', st !== 'peek');
+  document.documentElement.style.setProperty('--peek-h', m.peekH + 'px');
+  document.documentElement.style.setProperty('--sheet-vis', (m.H - m[st]) + 'px');
+}
+// Encaje de mapa teniendo en cuenta la barra superior y la parte visible del panel
+function viewPad(extra = 40) {
+  if (!MQ.matches) return {padding:[extra, extra]};
+  return {paddingTopLeft:[24, 84 + safe('t')], paddingBottomRight:[24, visibleSheet() + 20]};
+}
+function centerFor(latlng, zoom) {
+  if (!MQ.matches) return latlng;
+  const off = (visibleSheet() - 72 - safe('t')) / 2;
+  return map.unproject(map.project(L.latLng(latlng), zoom).add([0, off]), zoom);
+}
+// Arrastre del panel desde el asa, el resumen o las pestañas
+(() => {
+  let start = null, moved = false;
+  const order = ['peek', 'half', 'full'];
+  const down = e => {
+    if (!MQ.matches || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    start = {y:e.clientY, t:performance.now(), base:sheetMetrics()[sheet.state]}; moved = false;
+  };
+  const move = e => {
+    if (!start) return;
+    const dy = e.clientY - start.y;
+    if (!moved && Math.abs(dy) < 7) return;
+    moved = true; panelEl.classList.add('drag');
+    const m = sheetMetrics();
+    panelEl.style.setProperty('--sheet-y', clamp(start.base + dy, 0, m.peek) + 'px');
+  };
+  const up = e => {
+    if (!start) return;
+    const dy = e.clientY - start.y, dt = Math.max(1, performance.now() - start.t), v = dy / dt;
+    panelEl.classList.remove('drag');
+    if (moved) {
+      const m = sheetMetrics(), y = clamp(start.base + dy, 0, m.peek);
+      // Se proyecta dónde acabaría el gesto con su inercia y se elige la posición más cercana
+      const proj = y + v * 220;
+      let i = order.reduce((b, s, k) => Math.abs(m[s] - proj) < Math.abs(m[order[b]] - proj) ? k : b, 0);
+      const cur = order.indexOf(sheet.state);
+      if (i === cur && Math.abs(v) > 0.45) i = clamp(cur + (v < 0 ? 1 : -1), 0, 2);
+      setSheet(order[i]);
+      const stop = ev => { ev.stopPropagation(); ev.preventDefault(); };   // el arrastre no cuenta como toque
+      window.addEventListener('click', stop, {capture:true, once:true});
+      setTimeout(() => window.removeEventListener('click', stop, true), 300);
+    }
+    start = null;
+  };
+  for (const el of [$('grab'), $('msum'), tabsEl]) el.addEventListener('pointerdown', down);
+  window.addEventListener('pointermove', move, {passive:true});
+  window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+  const cycle = () => setSheet(sheet.state === 'peek' ? 'half' : sheet.state === 'half' ? 'full' : 'peek');
+  $('grab').addEventListener('click', cycle);
+  $('msum').addEventListener('click', cycle);
+})();
+// Coloca la barra de búsqueda flotante sobre el mapa en móvil
+function syncLayout() {
+  const mobile = MQ.matches;
+  map.options.zoomSnap = mobile ? 0.25 : 0.5;
+  qEl.placeholder = mobile ? 'Buscar estación, tren o viaje' : 'Estación, tren o viaje (Sevilla · 03061 · Madrid Barcelona)';
+  if (mobile && topEl.parentElement !== document.body) { document.body.appendChild(topEl); topEl.classList.add('mtop'); }
+  if (!mobile && topEl.parentElement === document.body) { panelEl.insertBefore(topEl, tabsEl); topEl.classList.remove('mtop'); panelEl.style.removeProperty('--sheet-y'); }
+  legend.setPosition(mobile ? 'topright' : 'bottomleft');
+  if (mobile && !syncLayout.done) $('legend').classList.add('min');   // en móvil empieza plegada
+  syncLayout.done = true;
+  if (mobile) setSheet(sheet.state);
+  map.invalidateSize();
+}
+MQ.addEventListener('change', syncLayout);
+addEventListener('resize', () => { if (MQ.matches) setSheet(sheet.state); });
+qEl.addEventListener('focus', () => { if (MQ.matches) setSheet('peek'); });
+// Resumen visible con el panel recogido
+function renderMsum(n, punct, inc) {
+  const el = $('msum'); if (!MQ.matches) return;
+  const kind = state.mode === 'live' ? 'live' : state.mode === 'sim' ? 'sim' : state.mode === 'offline' ? 'err' : '';
+  let txt;
+  if (state.view === 'train' && state.selected) { const t = state.selected; txt = `<b>${esc(t.label)} ${esc(t.number)}</b> · ${esc(trainDesc(t))} · <span class="c-${delayClass(t.delay)}">${delayText(t.delay)}</span>`; }
+  else if (state.view === 'station' && state.station) txt = `<b>${esc(state.station.name)}</b> · llegadas y salidas`;
+  else txt = `<b>${n}</b> trenes · <b>${punct}</b> puntuales · <b class="${inc ? 'c-crit' : ''}">${inc}</b> incidencias`;
+  el.innerHTML = `<span class="dot ${kind}"></span><span class="sp">${txt}</span><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 15 6-6 6 6"/></svg>`;
+}
+// Botón «atrás» del móvil: cierra la ficha de tren o de estación
+let histPushed = false;
+function pushSheetHistory() { if (MQ.matches && !histPushed) { history.pushState({tv:1}, ''); histPushed = true; } }
+function popSheetHistory() { if (histPushed) { histPushed = false; history.back(); } }
+addEventListener('popstate', () => {
+  histPushed = false;
+  if (state.view === 'train') closeTrain(true); else if (state.view === 'station') closeStation(true);
+});
+// Estación más cercana a mí
+let meLayer = null;
+$('locate').addEventListener('click', () => {
+  if (!navigator.geolocation) { toast('Tu navegador no permite usar la ubicación'); return; }
+  toast('Buscando tu ubicación…');
+  navigator.geolocation.getCurrentPosition(pos => {
+    const me = [pos.coords.latitude, pos.coords.longitude];
+    if (meLayer) map.removeLayer(meLayer);
+    meLayer = L.layerGroup([
+      L.circleMarker(me, {pane:'route', radius:16, color:'#38bdf8', weight:1, fillColor:'#38bdf8', fillOpacity:.15, interactive:false}),
+      L.circleMarker(me, {pane:'route', radius:6.5, color:'#fff', weight:2.5, fillColor:'#38bdf8', fillOpacity:1, interactive:false}),
+    ]).addTo(map);
+    let best = null, bd = Infinity;
+    for (const s of STATIONS.values()) { if (s.junction) continue; const d = hav(me, s.c); if (d < bd) { bd = d; best = s; } }
+    if (!best) return;
+    openStation(best, false);
+    map.flyToBounds(L.latLngBounds([me, best.c]), {...viewPad(60), maxZoom:12, duration:.9});
+    toast(`Estación más cercana: ${best.name} · ${(bd / 1000).toFixed(1).replace('.', ',')} km`);
+  }, err => toast(err.code === 1 ? 'Permiso de ubicación denegado' : 'No se ha podido obtener tu ubicación'), {enableHighAccuracy:true, timeout:12000, maximumAge:60000});
+});
 
 /* =====================================================================
    11. BUCLES — animación continua con requestAnimationFrame
@@ -2141,13 +2368,13 @@ function frame(nowP) {
       updateHeading(t);
       styleTrain(t);
     }
-    if (state.follow && state.followReady && state.selected) map.panTo(state.selected.pos, {animate:false, noMoveStart:true});
+    if (state.follow && state.followReady && state.selected) map.panTo(centerFor(state.selected.pos, map.getZoom()), {animate:false, noMoveStart:true});
   }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 map.on('dragstart', () => { if (state.follow) { state.follow = false; if (state.view === 'train') renderTrainView(); } });
-map.on('click', () => { if (state.view === 'train') closeTrain(); });
+map.on('click', () => { if (state.view === 'train') closeTrain(); else if (MQ.matches && sheet.state !== 'peek') setSheet('peek'); });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape' || document.activeElement === qEl) return;
   if (state.view === 'train') closeTrain(); else if (state.view === 'station') closeStation();
@@ -2174,6 +2401,8 @@ setInterval(() => { if (state.view === 'trenes' && document.activeElement !== $(
    12. ARRANQUE
    ===================================================================== */
 syncZoom();
+syncLayout();
+if (MQ.matches) map.fitBounds([[36.0,-9.3],[43.8,3.3]], {paddingTopLeft:[4, 80], paddingBottomRight:[4, visibleSheet() + 6]});
 setMode('wait');
 if (settings.mode === 'sim') enterSim(); else pollLive();
 updateDashboard();
