@@ -47,21 +47,48 @@ for (const s of csv('stop_times.txt')) {
 const products = [], pIdx = p => { let i = products.indexOf(p); if (i < 0) { i = products.length; products.push(p); } return i; };
 const usedStops = new Set();
 const out_days = {};
+// Renfe trocea muchos trenes en tramos con el mismo número (p. ej. 4154 A Coruña→Zamora y Ourense→Madrid).
+// Se unen en un único recorrido cuando comparten alguna estación.
+function mergeSegments(segs) {
+  segs.sort((x, y) => x[0][2] - y[0][2]);
+  const out = [];
+  for (const sg of segs) {
+    const cur = out.find(o => sg.some(([c]) => o.some(([c2]) => c2 === c)));
+    if (!cur) { out.push(sg.map(x => x.slice())); continue; }
+    for (const [c, a, dep] of sg) {
+      const ex = cur.find(x => x[0] === c);
+      if (ex) { ex[1] = Math.min(ex[1], a); ex[2] = Math.max(ex[2], dep); } else cur.push([c, a, dep]);
+    }
+    cur.sort((x, y) => x[1] - y[1] || x[2] - y[2]);
+  }
+  return out;
+}
+let merged = 0;
 for (const d of days) {
-  const list = [];
+  const byNum = new Map();
   for (const t of trips) {
     if (!runs(t.service_id, d)) continue;
     const s = (st.get(t.trip_id) || []).sort((a, b) => a[0] - b[0]);
     if (s.length < 2) continue;
-    // Ayer sólo interesa si el tren sigue circulando pasada la medianoche
-    if (d === days[0] && Math.max(...s.map(x => x[3] ?? x[2] ?? 0)) < 1440) continue;
-    const flat = [];
-    for (const [, code, a, dep] of s) { flat.push(code, a ?? dep, dep ?? a); usedStops.add(code); }
-    list.push([norm(t.trip_short_name || t.trip_id), pIdx(routes.get(t.route_id) || 'Tren'), flat]);
+    const num = norm(t.trip_short_name || t.trip_id);
+    if (!byNum.has(num)) byNum.set(num, {prod:pIdx(routes.get(t.route_id) || 'Tren'), segs:[]});
+    byNum.get(num).segs.push(s.map(([, code, a, dep]) => [code, a ?? dep, dep ?? a]));
+  }
+  const list = [];
+  for (const [num, {prod, segs}] of byNum) {
+    const full = mergeSegments(segs);
+    merged += segs.length - full.length;
+    for (const sg of full) {
+      // Ayer sólo interesa si el tren sigue circulando pasada la medianoche
+      if (d === days[0] && Math.max(...sg.map(x => x[2])) < 1440) continue;
+      sg.forEach(x => usedStops.add(x[0]));
+      list.push([num, prod, sg.flat()]);
+    }
   }
   list.sort((a, b) => a[2][2] - b[2][2]);
   out_days[d] = list;
 }
+console.log(`Tramos unidos en un mismo tren: ${merged}`);
 const stops = {};
 for (const s of csv('stops.txt')) { const c = norm(s.stop_id); if (usedStops.has(c)) stops[c] = [s.stop_name, +(+s.stop_lat).toFixed(5), +(+s.stop_lon).toFixed(5)]; }
 

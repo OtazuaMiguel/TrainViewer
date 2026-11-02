@@ -1838,7 +1838,7 @@ const PROD = {
 const prodInfo = p => PROD[String(p || '').trim().toUpperCase()] || [String(p || 'Tren').trim(), 'md'];
 const sched = {loaded:false, byNum:new Map(), byStop:new Map(), stops:{}, generated:null};
 function applySchedule(h) {
-  sched.byNum = new Map(); sched.byStop = new Map(); sched.stops = h.stops || {}; sched.generated = h.generated;
+  sched.byNum = new Map(); sched.byStop = new Map(); sched.ids = new Set(); sched.stops = h.stops || {}; sched.generated = h.generated;
   const now = Date.now();
   for (const [day, list] of Object.entries(h.days || {})) {
     const [y, m, d] = day.split('-').map(Number), base = madridTime(y, m - 1, d, 0, 0);
@@ -1847,12 +1847,23 @@ function applySchedule(h) {
       for (let i = 0; i < flat.length; i += 3) stops.push({code:norm(flat[i]), arr:base + flat[i + 1] * 60000, dep:base + flat[i + 2] * 60000});
       if (stops[stops.length - 1].arr < now - 3 * 3600e3) continue;          // ya terminado hace rato
       const [label, cat] = prodInfo(h.products[pi]);
-      const trip = {num:norm(num), label, cat, stops, day, id:'P' + norm(num) + day};
+      const id = 'P' + norm(num) + day; let uid = id, k = 1; while (sched.ids && sched.ids.has(uid)) uid = id + '-' + (++k);
+      (sched.ids || (sched.ids = new Set())).add(uid);
+      const trip = {num:norm(num), label, cat, stops, day, id:uid};
       (sched.byNum.get(trip.num) || sched.byNum.set(trip.num, []).get(trip.num)).push(trip);
       stops.forEach((s, i) => (sched.byStop.get(s.code) || sched.byStop.set(s.code, []).get(s.code)).push({trip, i}));
     }
   }
   for (const code in sched.stops) ensureStation(code);
+  // Las ciudades de la red incluyen todas sus estaciones con servicio («Zaragoza» = Delicias + Portillo + Goya…)
+  for (const hub of STATIONS.values()) {
+    if (!hub.net || hub.junction) continue;
+    const city = fold(hub.name);
+    for (const code in sched.stops) {
+      const [name, la, lo] = sched.stops[code], n = fold(name);
+      if ((n === city || n.startsWith(city + ' ')) && hav(hub.c, [la, lo]) < 15000) hub.codes.add(code);
+    }
+  }
   sched.loaded = true;
   if (state.station) renderStation();
 }
@@ -1937,7 +1948,7 @@ function boardSched(st) {
     if (i < trip.stops.length - 1) { const est = s.dep + ts.delay * 60000; if (est >= now - 60000 && s.dep <= horizon) dep.push({...base, sched:s.dep, est, other:exactName(last.code)}); }
   }
   const by = (a, b) => a.est - b.est;
-  return {arr:arr.sort(by).slice(0, 12), dep:dep.sort(by).slice(0, 12)};
+  return {arr:arr.sort(by).slice(0, 16), dep:dep.sort(by).slice(0, 16)};
 }
 // Viajes A -> B del horario (pendientes de salir de A o en camino a B)
 function tripsSched(A, B) {
@@ -1950,12 +1961,14 @@ function tripsSched(A, B) {
     const d = trip.stops[i].dep + ts.delay * 60000, a = trip.stops[j].arr + ts.delay * 60000;
     if (a < now) continue;
     if (ts.kind === 'live' && ts.nextIdx > j) continue;
-    if (ts.kind !== 'live' && d < now - 2 * 60000) continue;
+    if (ts.kind === 'plan' && d < now - 2 * 60000) continue;
+    if (ts.kind === 'cut' && a < now) continue;           // (los «sin datos» ya salidos se muestran hasta su llegada)
     out.push({trip, t:ts.t, dep:d, arr:a, delay:ts.delay, kind:ts.kind, depSched:trip.stops[i].dep});
   }
   return out.sort((x, y) => x.dep - y.dep).slice(0, 15);
 }
 // Tren programado (aún sin salir o sin posición): se muestra con su recorrido y horario
+function planBadge(trip) { const k = tripState(trip).kind; return k === 'plan' ? '<em class="k-plan">programado</em>' : k === 'nolive' ? '<em class="k-nolive">sin datos en directo</em>' : k === 'cut' ? '<em class="k-cut">afectado por corte</em>' : ''; }
 function plannedTrain(trip) {
   const c0 = stationCoord(trip.stops[0].code);
   return {id:trip.id, src:'plan', number:trip.num, label:trip.label, cat:trip.cat, plan:trip, delay:0, pos:c0 || [40.4, -3.7], marker:null};
@@ -2182,11 +2195,24 @@ function doSearch() {
   const starts = s => fold(s.name).startsWith(nq) || fold(s.name).split(/[\s\-\/.]+/).some(w => w.startsWith(nq)) ? 1 : 0;
   const stn = [...STATIONS.values()].filter(s => !s.junction && nameHas(s.name, q))
     .sort((a, b) => (starts(b) - starts(a)) || (served(b) - served(a)) || (b.major - a.major) || a.name.length - b.name.length).slice(0, 7).map(s => ({kind:'st', s}));
-  const trn = [...trains.values()].filter(t => t.number.includes(q) || (t.label + ' ' + t.number).toLowerCase().includes(q)).slice(0, 6).map(t => ({kind:'tr', t}));
+  const trn = [...trains.values()].filter(t => t.number.includes(q) || norm(t.number).includes(norm(q)) || (t.label + ' ' + t.number).toLowerCase().includes(q)).slice(0, 6).map(t => ({kind:'tr', t}));
+  // Trenes del horario por número (aunque no tengan posición en directo): «00808», «808», «alvia 622»
+  const qn = (q.match(/\d{2,6}/) || [])[0];
+  if (qn && sched.loaded) {
+    const shown = new Set(trn.map(r => norm(r.t.number)));
+    for (const [num, list] of sched.byNum) {
+      if (trn.length >= 8) break;
+      if (shown.has(num) || !(num === norm(qn) || num.startsWith(norm(qn)))) continue;
+      const now = Date.now(), tr = list.filter(x => tripState(x).kind !== 'done').sort((a, b) => Math.abs(a.stops[0].dep - now) - Math.abs(b.stops[0].dep - now))[0];
+      if (!tr) continue;
+      const live = liveOfTrip(tr);
+      trn.push({kind:'tr', t:live || plannedTrain(tr)}); shown.add(num);
+    }
+  }
   results = [...stn, ...trn]; hl = 0;
   resEl.innerHTML = results.length ? results.map((r, i) => r.kind === 'st'
     ? `<button data-i="${i}" class="${i === hl ? 'hl' : ''}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a98ad" stroke-width="2"><circle cx="12" cy="12" r="4"/></svg>${esc(r.s.name)}<small>${r.s.net ? (r.s.codes.size > 1 ? 'Ciudad · todas sus estaciones' : 'Estación') : r.s.hub ? 'Estación · ' + esc(r.s.hub.name) : 'Estación'}</small></button>`
-    : `<button data-i="${i}" class="${i === hl ? 'hl' : ''}"><i style="width:9px;height:9px;border-radius:50%;background:${CAT_COLOR[r.t.cat]}"></i>${esc(r.t.label)} ${esc(r.t.number)}<small>${esc(trainDesc(r.t))}</small></button>`).join('')
+    : `<button data-i="${i}" class="${i === hl ? 'hl' : ''}"><i style="width:9px;height:9px;border-radius:50%;background:${CAT_COLOR[r.t.cat]}"></i>${esc(r.t.label)} ${esc(r.t.number)}${r.t.src === 'plan' ? planBadge(r.t.plan) : ''}<small>${esc(trainDesc(r.t))}${r.t.src === 'plan' ? ' · ' + fmtHM(r.t.plan.stops[0].dep) + '–' + fmtHM(r.t.plan.stops[r.t.plan.stops.length - 1].arr) : ''}</small></button>`).join('')
     : '<div class="none">Sin resultados</div>';
   resEl.classList.add('open');
   resEl.querySelectorAll('button').forEach(b => b.onmousedown = ev => { ev.preventDefault(); choose(+b.dataset.i); });
