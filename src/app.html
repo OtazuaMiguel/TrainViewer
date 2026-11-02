@@ -182,6 +182,7 @@ body:not(.mode-sim) .sim-only{display:none!important}
 #map{height:100%;background:var(--bg)}
 .leaflet-container{font:inherit;background:var(--bg)}
 .leaflet-tile-pane{filter:brightness(.92) contrast(1.05) saturate(.6)}
+.tiles-dark{filter:invert(1) hue-rotate(180deg) brightness(.78) contrast(.92) saturate(.35)}
 .leaflet-bar{border:1px solid var(--line-2)!important;box-shadow:0 4px 18px rgba(0,0,0,.4)!important;border-radius:9px!important;overflow:hidden}
 .leaflet-bar a{background:var(--panel)!important;color:var(--text)!important;border-bottom-color:var(--line)!important}
 .leaflet-bar a:hover{background:var(--panel-2)!important}
@@ -382,7 +383,9 @@ body:not(.mode-sim) .sim-only{display:none!important}
       <label class="ck"><input type="checkbox" id="s-pub"> Permitir proxies CORS públicos (allorigins, codetabs) si la conexión directa falla</label>
       <label class="f">Mapa base
         <select id="s-base">
-          <option value="tiles">CARTO oscuro (con respaldo integrado)</option>
+          <option value="auto">Automático (Esri, si no IGN)</option>
+          <option value="esri">Esri · gris oscuro</option>
+          <option value="ign">IGN España · oscurecido</option>
           <option value="embedded">Sólo mapa integrado (sin conexión)</option>
         </select>
       </label>
@@ -424,7 +427,8 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem('cfe.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem('cfe.' + k, JSON.stringify(v)); } catch {} },
 };
-const settings = { mode:store.get('mode', 'auto'), proxy:store.get('proxy', ''), pub:store.get('pub', true), base:store.get('base', 'tiles') };
+const settings = { mode:store.get('mode', 'auto'), proxy:store.get('proxy', ''), pub:store.get('pub', true), base:store.get('base', 'auto') };
+if (!['auto','esri','ign','embedded'].includes(settings.base)) settings.base = 'auto';
 
 /* =====================================================================
    1. DATOS ESTÁTICOS
@@ -681,25 +685,27 @@ if (EMBED) {
   for (const l of EMBED.land) L.polygon(decodePolyline(l.p), landStyle(l.c)).addTo(map);
   L.polyline(EMBED.prov.map(decodePolyline), {pane:'base', interactive:false, color:'#1d2838', weight:0.8}).addTo(map);
 }
-// Teselas con respaldo: CARTO -> Esri -> sólo mapa integrado
-// Proveedores sin clave de API. Si ninguno carga, queda el mapa integrado.
-const CARTO_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
-const TILES = [
-  {name:'CARTO Dark', url:'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', o:{subdomains:'abcd', maxZoom:19}, attr:CARTO_ATTR},
-  {name:'CARTO Dark (alt.)', url:'https://{s}.basemaps.cartocdn.com/rastertiles/dark_nolabels/{z}/{x}/{y}{r}.png', o:{subdomains:'abcd', maxZoom:19}, attr:CARTO_ATTR},
-];
-let tileIdx = -1, tileLayer = null, baseStatus = 'integrado';
+// Teselas sin clave de API, comprobadas desde GitHub Pages (CARTO y OpenStreetMap ya no sirven teselas a webs así).
+// Orden automático: Esri gris oscuro -> IGN (oscurecido con CSS) -> sólo mapa integrado.
+const TILES = {
+  esri:{name:'Esri gris oscuro', url:'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+        o:{maxNativeZoom:16, maxZoom:19}, attr:'Teselas &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap'},
+  ign: {name:'IGN España', url:'https://www.ign.es/wmts/ign-base?layer=IGNBaseTodo&style=default&tilematrixset=GoogleMapsCompatible&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image/jpeg&TileMatrix={z}&TileCol={x}&TileRow={y}',
+        o:{maxNativeZoom:17, maxZoom:19, className:'tiles-dark'}, attr:'&copy; <a href="https://www.ign.es">Instituto Geográfico Nacional</a>'},
+};
+const TILE_ORDER = {auto:['esri', 'ign'], esri:['esri'], ign:['ign'], embedded:[]};
+let tileQueue = [], tileLayer = null, baseStatus = 'integrado';
 function startTiles() {
   if (tileLayer) { map.removeLayer(tileLayer); tileLayer = null; }
-  tileIdx = -1;
-  if (settings.base === 'embedded') { baseStatus = 'integrado'; setTimeout(renderDiag, 0); return; }
+  tileQueue = [...(TILE_ORDER[settings.base] || TILE_ORDER.auto)];
+  if (!tileQueue.length) { baseStatus = 'integrado'; setTimeout(renderDiag, 0); return; }
   nextTiles();
 }
 function nextTiles() {
   if (tileLayer) { map.removeLayer(tileLayer); tileLayer = null; }
-  tileIdx++;
-  if (tileIdx >= TILES.length) { baseStatus = 'integrado (no cargan las teselas)'; renderDiag(); return; }
-  const T = TILES[tileIdx]; let ok = 0, bad = 0;
+  const key = tileQueue.shift();
+  if (!key) { baseStatus = 'integrado (no cargan las teselas)'; renderDiag(); return; }
+  const T = TILES[key]; let ok = 0, bad = 0;
   tileLayer = L.tileLayer(T.url, {...T.o, attribution:T.attr + ' · Natural Earth'});
   tileLayer.on('tileload', () => { ok++; if (ok === 1) { baseStatus = T.name; renderDiag(); } });
   tileLayer.on('tileerror', () => { bad++; if (!ok && bad >= 4) nextTiles(); });
@@ -761,7 +767,7 @@ function renderLegend() {
     <div class="r"><i class="pt" style="background:var(--md)"></i>Media Distancia</div>
     ${live ? '' : '<div class="r"><i class="pt" style="background:var(--fr)"></i>Mercancías</div>'}
     <div class="r"><i class="pt" style="background:#0a0f18;box-shadow:0 0 0 2px var(--late)"></i>Retraso ≥ 10 min</div>
-    <div class="note">${live ? 'Posiciones: Renfe en tiempo real' : 'Simulación con datos ficticios'}</div>`;
+    <div class="note">${live ? 'Posiciones: Renfe en tiempo real' : state.mode === 'sim' ? 'Simulación con datos ficticios' : 'Conectando con Renfe…'}</div>`;
 }
 const banner = L.control({position:'topleft'});
 banner.onAdd = () => { const d = L.DomUtil.create('div', 'banner'); d.id = 'banner'; return d; };
@@ -872,7 +878,7 @@ function edgeHTML(e) {
 /* =====================================================================
    6. TIEMPO REAL — Renfe (flotaLD.json + trenesConEstacionesLD.json)
    ===================================================================== */
-const live = {ok:false, everOk:false, failures:0, feedTime:null, lastOk:0, via:null, lastErr:'', routes:new Map(), routesAt:0, routesLoading:false, timer:null, polls:0};
+const live = {ok:false, everOk:false, failures:0, feedTime:null, lastOk:0, via:null, snapshot:false, lastSource:'', lastErr:'', routes:new Map(), routesAt:0, routesLoading:false, timer:null, polls:0};
 
 function accessRoutes() {
   const r = [];
@@ -896,13 +902,33 @@ async function fetchJSON(url) {
     return JSON.parse(txt);
   } finally { clearTimeout(to); }
 }
-async function fetchRenfe(url) {
-  const errs = [];
-  for (const r of accessRoutes()) {
-    try { const j = await fetchJSON(r.build(url)); live.via = r.name; live.snapshot = !!r.snapshot; return j; }
-    catch (e) { errs.push(`${r.name}: ${e.name === 'AbortError' ? 'tiempo agotado' : (e.message === 'Failed to fetch' ? 'bloqueado (CORS/red)' : e.message)}`); }
+const errText = (r, e) => `${r.name}: ${e.name === 'AbortError' ? 'tiempo agotado' : (e.message === 'Failed to fetch' ? 'bloqueado (CORS/red)' : e.message)}`;
+const wait = ms => new Promise(r => setTimeout(r, ms));
+// Prueba todas las vías en paralelo. Gana la primera fuente en directo; la copia de GitHub
+// sólo se usa si ninguna fuente en directo responde en 4 s. La vía que funcionó se prueba primero en la siguiente consulta.
+async function fetchRenfe(url, track = true) {
+  const routes = accessRoutes(), errs = [];
+  const pref = routes.find(r => r.name === live.via && !r.snapshot);
+  if (pref) {
+    try { return await fetchJSON(pref.build(url)); } catch (e) { errs.push(errText(pref, e)); live.via = null; }
   }
-  throw new Error(errs.join(' · '));
+  const lives = routes.filter(r => !r.snapshot && r !== pref), snap = routes.find(r => r.snapshot);
+  const tagged = (r) => fetchJSON(r.build(url)).then(j => ({j, r}), e => { errs.push(errText(r, e)); throw e; });
+  const liveP = lives.length ? Promise.any(lives.map(tagged)) : Promise.reject(new Error('sin fuentes'));
+  liveP.catch(() => {});
+  let win = null;
+  if (snap) {
+    const snapP = tagged(snap); snapP.catch(() => {});
+    win = await Promise.race([liveP, wait(4000).then(() => Promise.any([liveP, snapP]))]).catch(() => null);
+    if (!win) win = await Promise.any([liveP, snapP]).catch(() => null);
+  } else win = await liveP.catch(() => null);
+  if (!win) throw new Error(errs.join(' · ') || 'sin respuesta');
+  if (track) {
+    live.via = win.r.snapshot ? null : win.r.name;    // con la copia, se reintenta el directo en cada consulta
+    live.snapshot = !!win.r.snapshot;
+    live.lastSource = win.r.name;
+  }
+  return win.j;
 }
 const listOf = d => Array.isArray(d) ? d : (d && (d.trenes || d.trains || d.data)) || [];
 
@@ -913,6 +939,12 @@ async function pollLive() {
     const data = await fetchRenfe(CFG.FLOTA);
     const list = listOf(data);
     if (!list.length) throw new Error('respuesta sin trenes');
+    const ft = parseTime(data.fechaActualizacion);
+    if (state.mode === 'live' && ft && live.feedTime && ft <= live.feedTime) {  // mismos datos o más antiguos: no se reprocesan
+      const age = Math.round((Date.now() - live.feedTime) / 60000);
+      if (live.snapshot) setConn('live', `Casi en directo${age > 1 ? ' · ' + age + ' min' : ''}`);
+      live.timer = setTimeout(pollLive, CFG.POLL_MS); renderDiag(); return;
+    }
     if (state.mode !== 'live') enterLive();
     live.ok = live.everOk = true; live.failures = 0; live.lastOk = Date.now(); live.lastErr = '';
     live.feedTime = parseTime(data.fechaActualizacion);
@@ -933,7 +965,7 @@ async function pollLive() {
 async function loadRoutes() {
   live.routesLoading = true;
   try {
-    const data = await fetchRenfe(CFG.RUTAS);
+    const data = await fetchRenfe(CFG.RUTAS, false);
     const m = new Map();
     for (const r of listOf(data)) {
       const id = String(r.idTren ?? r.codComercial ?? r.id ?? '').trim(); if (!id) continue;
@@ -962,7 +994,7 @@ function ingestFleet(list) {
     let t = trains.get(id);
     const prevDelay = t ? t.delay : null;
     if (!t) {
-      t = {id, number:id, src:'live', cat:prod.cat, label:prod.n, pos:gps, samples:[], speed:null, stillSince:now, stillPos:gps, delay:0, held:false};
+      t = {id, number:id, src:'live', cat:prod.cat, label:prod.n, pos:gps, samples:[], speed:null, stillSince:num(raw.time) ? num(raw.time) * 1000 : now, stillPos:gps, delay:0, held:false};
       trains.set(id, t);
       t.snap = snapToNetwork(gps);
       t.pos = t.snap && t.snap.d < 6000 ? t.snap.pt : gps;
@@ -988,8 +1020,9 @@ function ingestFleet(list) {
         if (dt > 5) t.speed = Math.round(clamp(hav(a.p, b.p) / dt * 3.6, 0, 330));
       }
     } else if (fixTime - last.t > 90000) t.speed = 0;
-    if (hav(t.stillPos, gps) > 150) { t.stillPos = gps; t.stillSince = now; }
-    t.stillFor = now - t.stillSince;
+    // Tiempo parado medido con la hora de los datos (no con la de consulta), para que una copia antigua no simule paradas
+    if (hav(t.stillPos, gps) > 150) { t.stillPos = gps; t.stillSince = fixTime; }
+    t.stillFor = Math.max(0, (live.feedTime || now) - t.stillSince);
     t.nearStation = nearestCatStation(gps).d < 1500;
     // Animación hasta la nueva posición, sobre la vía cuando es posible
     const snap = snapToNetwork(gps);
@@ -1501,7 +1534,7 @@ document.querySelectorAll('#speed button').forEach(b => b.onclick = () => {
   setConn('sim', state.speed ? `Simulación ×${state.speed}` : 'Simulación en pausa');
 });
 function renderDiag() {
-  const src = state.mode === 'live' ? `Renfe ${live.snapshot ? 'casi en directo' : 'en directo'} (${live.via})` : state.mode === 'sim' ? 'Simulación' : state.mode === 'offline' ? 'Sin conexión' : 'Conectando…';
+  const src = state.mode === 'live' ? `Renfe ${live.snapshot ? 'casi en directo' : 'en directo'} (${live.lastSource})` : state.mode === 'sim' ? 'Simulación' : state.mode === 'offline' ? 'Sin conexión' : 'Conectando…';
   $('src-sum').textContent = src;
   const lines = [
     `Mapa base: ${baseStatus}`,
