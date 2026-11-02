@@ -43,6 +43,11 @@ for (const [name, vp] of [['escritorio', { width: 1440, height: 900 }], ['movil'
     log.push(`[${name}] BUSQUEDA "${q}": ${(await p.$eval('#results', e => e.innerText.replace(/\n+/g, ' · '))).slice(0, 400)}`);
   }
   await p.fill('#q', ''); await p.waitForTimeout(200);
+  log.push(`[${name}] SIN GPS ${await p.$$eval('.tmk.est', x => x.length)} trenes con posición estimada · con GPS ${await p.$$eval('.tmk:not(.est)', x => x.length)}`);
+  await p.fill('#q', '00808'); await p.waitForTimeout(500); await p.keyboard.press('Enter'); await p.waitForTimeout(2500);
+  log.push(`[${name}] 808 en el mapa: ${await p.$$eval('.tmk.focused', x => x.length)} · ${(await p.$eval('#trainv', e => e.innerText.replace(/\n+/g, ' | '))).slice(0, 300)}`);
+  await p.screenshot({ path: `diag/${name}-808.png` });
+  await p.keyboard.press('Escape'); await p.waitForTimeout(300);
   // Panel de estación: busca Madrid y abre su panel
   await p.fill('#q', 'Atocha'); await p.waitForTimeout(400); await p.keyboard.press('Enter'); await p.waitForTimeout(2500);
   log.push(`[${name}] ESTACION ${(await p.$eval('#station', e => e.innerText)).replace(/\n+/g, ' | ').slice(0, 700)}`);
