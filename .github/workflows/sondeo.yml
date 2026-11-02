@@ -18,16 +18,15 @@ jobs:
           const b = await chromium.launch(); const p = await b.newPage();
           const xhr = [];
           p.on('response', r => { const u = r.url(); const ct = r.headers()['content-type'] || ''; if (/json|xml/.test(ct) || /api|o\/|estado|incid/i.test(u)) xhr.push(r.status() + ' ' + ct.slice(0, 30) + ' ' + u.slice(0, 200)); });
-          for (const u of ['https://www.adif.es/viajeros/estado-de-la-red', 'https://www.adif.es/viajeros/avisos']) {
-            xhr.length = 0;
-            await p.goto(u, { waitUntil: 'networkidle', timeout: 60000 }); await p.waitForTimeout(4000);
-            console.log('=================', u);
-            const t = await p.evaluate(() => { const m = document.querySelector('main, #main-content, .portlet-layout') || document.body; return m.innerText; });
-            const i = t.indexOf('Estado de la red'); console.log(t.replace(/\n\s*\n+/g, '\n').slice(0, 7000));
-            console.log('--- peticiones:'); for (const x of xhr.filter(x => !/\.(js|css|png|svg|woff)/.test(x))) console.log('  ', x);
-            const cards = await p.evaluate(() => [...document.querySelectorAll('[class*="aviso-card"], [class*="aviso-estado-red__"]')].slice(0, 5).map(e => e.className + ' :: ' + e.outerHTML.slice(0, 400)));
-            console.log('--- estructura:'); cards.forEach(c => console.log('  ', c.replace(/\s+/g, ' ')));
-          }
+          await p.goto('https://www.adif.es/viajeros/estado-de-la-red', { waitUntil: 'networkidle', timeout: 60000 }); await p.waitForTimeout(3000);
+          console.log('==== ESTADO DOM');
+          console.log(await p.evaluate(() => { const h = [...document.querySelectorAll('*')].find(e => e.children.length === 0 && /Incidencia en la línea/.test(e.textContent)); let c = h; for (let i = 0; i < 4 && c; i++) c = c.parentElement; return c ? c.outerHTML.replace(/\s+/g, ' ').slice(0, 5000) : 'no'; }));
+          await p.goto('https://www.adif.es/viajeros/avisos', { waitUntil: 'networkidle', timeout: 60000 }); await p.waitForTimeout(3000);
+          console.log('==== AVISOS DOM');
+          console.log(await p.evaluate(() => { const h = [...document.querySelectorAll('*')].find(e => e.children.length === 0 && /Obras Redondela/.test(e.textContent)); let c = h; for (let i = 0; i < 5 && c; i++) c = c.parentElement; return c ? c.outerHTML.replace(/\s+/g, ' ').slice(0, 3000) : 'no'; }));
+          const link = await p.evaluate(() => { const a = [...document.querySelectorAll('a')].find(a => /Leer aviso: Obras Redondela/.test(a.textContent) || /Redondela/.test(a.getAttribute('aria-label') || '')); return a ? a.href : null; });
+          console.log('==== DETALLE', link);
+          if (link) { await p.goto(link, { waitUntil: 'networkidle', timeout: 60000 }); console.log(await p.evaluate(() => (document.querySelector('main') || document.body).innerText.replace(/\n\s*\n+/g, '\n').slice(0, 2500))); }
           await b.close();
           JS
           node ./p.mjs
