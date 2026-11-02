@@ -92,6 +92,6 @@ console.log(`Tramos unidos en un mismo tren: ${merged}`);
 const stops = {};
 for (const s of csv('stops.txt')) { const c = norm(s.stop_id); if (usedStops.has(c)) stops[c] = [s.stop_name, +(+s.stop_lat).toFixed(5), +(+s.stop_lon).toFixed(5)]; }
 
-const result = { generated: new Date().toISOString(), source: 'https://ssl.renfe.com/gtransit/Fichero_AV_LD/google_transit.zip', today: days[1], products, stops, days: out_days };
+const result = { version: 2, generated: new Date().toISOString(), source: 'https://ssl.renfe.com/gtransit/Fichero_AV_LD/google_transit.zip', today: days[1], products, stops, days: out_days };
 writeFileSync(out, JSON.stringify(result));
 console.log(`horarios.json: ${Object.keys(stops).length} estaciones · ` + days.map(d => `${d}: ${out_days[d].length} trenes`).join(' · ') + ` · ${(JSON.stringify(result).length / 1024).toFixed(0)} KB`);

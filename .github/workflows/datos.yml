@@ -44,7 +44,7 @@ jobs:
         run: |
           mkdir -p out
           HOY=$(TZ=Europe/Madrid date +%F)
-          if [ -f prev/horarios.json ] && node -e "process.exit(JSON.parse(require('fs').readFileSync('prev/horarios.json','utf8')).today==='$HOY'?0:1)"; then
+          if [ -f prev/horarios.json ] && node -e "process.exit(JSON.parse(require('fs').readFileSync('prev/horarios.json','utf8')).today==='$HOY'&&JSON.parse(require('fs').readFileSync('prev/horarios.json','utf8')).version===2?0:1)"; then
             cp prev/horarios.json out/horarios.json; echo "El horario de hoy ya estaba generado"
           elif curl -fsSL --retry 3 --retry-all-errors -m 180 -A "Mozilla/5.0" -o gtfs.zip https://ssl.renfe.com/gtransit/Fichero_AV_LD/google_transit.zip \
                && mkdir -p gtfs && unzip -q -o gtfs.zip -d gtfs && node scripts/horarios.mjs gtfs out/horarios.json; then
