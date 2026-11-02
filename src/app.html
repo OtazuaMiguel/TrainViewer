@@ -635,6 +635,14 @@ for (const L of LINES) for (let i = 0; i < L.path.length - 1; i++) {
   EDGES.push(edge); ADJ[a].push({e:edge, to:b, dir:1}); ADJ[b].push({e:edge, to:a, dir:-1});
 }
 const TOTAL_KM = EDGES.reduce((s, e) => s + e.len, 0) / 1000;
+// Red secundaria (resto de líneas): sólo se dibuja y sirve para colocar los trenes sobre su vía
+const SEC = ((EMBED && EMBED.sec) || []).map(enc => {
+  const geom = decodePolyline(enc), cum = [0];
+  for (let j = 1; j < geom.length; j++) cum.push(cum[j-1] + hav(geom[j-1], geom[j]));
+  let s = 90, w = 180, n = -90, e = -180;
+  for (const p of geom) { s = Math.min(s, p[0]); n = Math.max(n, p[0]); w = Math.min(w, p[1]); e = Math.max(e, p[1]); }
+  return {sec:true, geom, cum, len:cum[cum.length - 1], bbox:[s - .05, w - .07, n + .05, e + .07]};
+});
 
 function pointAt(e, s, dir = 1) {
   if (dir < 0) s = e.len - s;
@@ -644,11 +652,11 @@ function pointAt(e, s, dir = 1) {
   const f = (s - c[lo]) / ((c[hi] - c[lo]) || 1), p = e.geom[lo], q = e.geom[hi];
   return [p[0] + (q[0]-p[0])*f, p[1] + (q[1]-p[1])*f];
 }
-// Proyecta un punto GPS sobre la vía dibujada más cercana
-function snapToNetwork(p) {
+// Proyecta un punto GPS sobre la vía dibujada más cercana (red principal si está a <3 km; si no, cualquier línea)
+function nearestOn(list, p) {
   let best = null;
   const k = Math.cos(p[0] * RAD);
-  for (const e of EDGES) {
+  for (const e of list) {
     const b = e.bbox;
     if (p[0] < b[0] || p[0] > b[2] || p[1] < b[1] || p[1] > b[3]) continue;
     const g = e.geom;
@@ -661,6 +669,13 @@ function snapToNetwork(p) {
     }
   }
   return best;
+}
+function snapToNetwork(p) {
+  const main = nearestOn(EDGES, p);
+  if (main && main.d < 3000) return main;
+  const sec = nearestOn(SEC, p);
+  if (sec && sec.d < 4000 && (!main || sec.d < main.d)) return sec;
+  return main;
 }
 
 /* =====================================================================
@@ -713,7 +728,8 @@ function nextTiles() {
 }
 startTiles();
 
-// Vías
+// Vías: red secundaria tenue debajo, red principal con estado encima
+if (SEC.length) L.polyline(SEC.map(l => l.geom), {pane:'tracks', color:'#33435a', weight:1.4, opacity:.9, interactive:false}).addTo(map);
 const drawOrder = [...EDGES].sort((a, b) => (a.type === 'av') - (b.type === 'av'));
 for (const e of drawOrder) {
   const av = e.type === 'av', w = av ? 3.2 : 2.2;
@@ -760,6 +776,7 @@ function renderLegend() {
     <div class="r"><i class="ln" style="background:var(--ok)"></i>Circulación normal</div>
     <div class="r"><i class="ln" style="background:var(--warn)"></i>${live ? 'Retrasos en el tramo' : 'Precaución · velocidad reducida'}</div>
     <div class="r"><i class="ln dash"></i>${live ? 'Tren detenido en plena vía' : 'Tramo cortado'}</div>
+    <div class="r"><i class="ln" style="height:1.5px;background:#4a5d78"></i>Otras líneas (sin estado)</div>
     <div class="s"></div>
     <div class="lt">Trenes</div>
     <div class="r"><i class="pt" style="background:var(--av)"></i>Alta Velocidad</div>
@@ -994,7 +1011,7 @@ function ingestFleet(list) {
     let t = trains.get(id);
     const prevDelay = t ? t.delay : null;
     if (!t) {
-      t = {id, number:id, src:'live', cat:prod.cat, label:prod.n, pos:gps, samples:[], speed:null, stillSince:num(raw.time) ? num(raw.time) * 1000 : now, stillPos:gps, delay:0, held:false};
+      t = {id, number:id, src:'live', cat:prod.cat, label:prod.n, pos:gps, samples:[], speed:null, stillSince:live.feedTime || now, stillPos:gps, delay:0, held:false};
       trains.set(id, t);
       t.snap = snapToNetwork(gps);
       t.pos = t.snap && t.snap.d < 6000 ? t.snap.pt : gps;
@@ -1035,7 +1052,7 @@ function ingestFleet(list) {
       t.anim = {t0:now, t1:now + CFG.POLL_MS * 0.95, from:[from.lat, from.lng], to:target, e:along ? snap.e : null, s0:along ? t.snap.s : 0, s1:along ? snap.s : 0};
     }
     t.snap = snap;
-    t.held = !!(t.stillFor > 6 * 60000 && t.delay >= 15 && !t.nearStation);
+    t.held = !!(t.stillFor > 8 * 60000 && t.delay >= 15 && !t.nearStation);
     styleTrain(t);
     if (!first && prevDelay !== null) {
       if (prevDelay < 15 && t.delay >= 15) addLog(t.delay >= 30 ? 'crit' : 'late', `${t.label} ${t.number} · +${t.delay} min`, `${stationName(t.origin)} → ${stationName(t.dest)} · retraso superior a ${t.delay >= 30 ? 30 : 15} min`, {train:t});
@@ -1050,7 +1067,7 @@ function ingestFleet(list) {
 // Estado de cada tramo deducido de los trenes reales que lo recorren
 function inferNetworkState(first) {
   for (const e of EDGES) e.liveTrains = [];
-  for (const t of trains.values()) if (t.snap && t.snap.d < 6000) t.snap.e.liveTrains.push(t);
+  for (const t of trains.values()) if (t.snap && t.snap.d < 6000 && !t.snap.e.sec) t.snap.e.liveTrains.push(t);
   for (const e of EDGES) {
     const ts = e.liveTrains;
     let status = 'ok', cause = null;

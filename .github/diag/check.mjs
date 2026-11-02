@@ -28,6 +28,10 @@ for (const [name, vp] of [['escritorio', { width: 1440, height: 900 }], ['movil'
   }));
   log.push(`[${name}] ESTADO ${JSON.stringify(info)}`);
   await p.screenshot({ path: `diag/${name}.png` });
+  // Panel de estación: busca Madrid y abre su panel
+  await p.fill('#q', 'Madrid'); await p.waitForTimeout(400); await p.keyboard.press('Enter'); await p.waitForTimeout(2500);
+  log.push(`[${name}] ESTACION ${(await p.$eval('#station', e => e.innerText)).replace(/\n+/g, ' | ').slice(0, 700)}`);
+  await p.screenshot({ path: `diag/${name}-estacion.png` });
 }
 await b.close();
 writeFileSync('diag/log.txt', log.join('\n'));

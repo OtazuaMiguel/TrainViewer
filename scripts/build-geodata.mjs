@@ -97,6 +97,9 @@ for (const L of LINES) for (let i = 0; i < L.path.length - 1; i++) {
 }
 console.log(`tramos con trazado real: ${Object.keys(edges).length} · aproximados: ${fallback.join(', ') || 'ninguno'}`);
 
+// --- 1b. Red secundaria completa (todas las líneas de Natural Earth en la península), para que todo tren tenga vía debajo
+const sec = rail.map(l => dp(l, 0.002)).filter(l => l.length > 1).map(enc);
+
 // --- 2. Mapa base integrado: países y provincias
 const C = await getJSON('ne_10m_admin_0_countries.geojson', NE + 'ne_10m_admin_0_countries.geojson');
 const bb = [34.2, -11.5, 45.2, 5.5], inbb = p => p[1] > bb[0] && p[1] < bb[2] && p[0] > bb[1] && p[0] < bb[3];
@@ -119,5 +122,5 @@ const est = await getJSON('estaciones.geojson', STATION_SOURCES);
 const cat = est.features.map(f => f.properties).filter(p => p.CODIGO < 99000)
   .map(p => [String(p.CODIGO).padStart(5, '0'), p.NOMBRE, +(+p.LAT).toFixed(5), +(+p.LON).toFixed(5)]);
 
-writeFileSync(join(root, 'src/geodata.json'), JSON.stringify({ edges, land, prov, cat }));
+writeFileSync(join(root, 'src/geodata.json'), JSON.stringify({ edges, sec, land, prov, cat }));
 console.log(`src/geodata.json actualizado · ${cat.length} estaciones`);
