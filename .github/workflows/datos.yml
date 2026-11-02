@@ -4,7 +4,7 @@ name: Datos (histórico e incidencias)
 # Se publica en la rama «datos» (un único commit que se sustituye, para no engordar el repositorio).
 on:
   schedule:
-    - cron: '4,19,34,49 * * * *'
+    - cron: '4,19,34,49 * * * *' 
   workflow_dispatch:
 
 permissions:
