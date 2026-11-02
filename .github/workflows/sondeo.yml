@@ -6,32 +6,28 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Avisos de Adif
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Adif renderizado
         run: |
-          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
-          curl -sSL -m 30 -A "$UA" -o /tmp/avisos.html "https://www.adif.es/viajeros/avisos"
-          curl -sSL -m 30 -A "$UA" -o /tmp/estado.html "https://www.adif.es/viajeros/estado-de-la-red"
-          python3 - <<'PY'
-          import re,html
-          def txt(s): return re.sub(r'\s+',' ',html.unescape(re.sub(r'<[^>]+>',' ',s))).strip()
-          b=open('/tmp/avisos.html',encoding='utf8',errors='replace').read()
-          cards=re.split(r'<div class="aviso-card(?=[ "])', b)[1:]
-          print('TARJETAS', len(cards))
-          for c in cards:
-              st=re.search(r'status--(\w+)',c); t=re.search(r'<strong>(.*?)</strong>',c,re.S)
-              links=re.findall(r'href="([^"]+)"',c)[:3]
-              body=txt(c)[:420]
-              print('*', st.group(1) if st else '?', '|', txt(t.group(1)) if t else '?', '|', body, '|', links)
-          e=open('/tmp/estado.html',encoding='utf8',errors='replace').read()
-          print('\nESTADO: urls interesantes')
-          for u in sorted(set(re.findall(r'["\'](https?://[^"\']*?(?:api|json|incid|estado|circul)[^"\']*)["\']', e, re.I)))[:40]: print(' ', u)
-          for u in sorted(set(re.findall(r'["\'](/[^"\']*?(?:api|json|incid|estado-red|circulacion)[^"\']*)["\']', e, re.I)))[:40]: print(' ', u)
-          i=e.find('Estado de la red</h1>'); print('\nESTADO h1 en', i)
-          for m in re.finditer(r'class="([^"]*(?:incid|estado|linea|tramo|red)[^"]*)"', e, re.I):
-              pass
-          cls=sorted(set(re.findall(r'class="([^"]*(?:incid|estado|tramo|linea|mapa)[^"]*)"', e, re.I)))
-          print('clases:', cls[:40])
-          j=e.find('portlet'); print(len(e))
-          k=[m.start() for m in re.finditer(r'(?i)iframe|data-url|fetch\(|ajax', e)][:10]
-          for p in k: print('---', re.sub(r'\s+',' ',e[max(0,p-200):p+300]))
-          PY
+          npm i --no-save playwright@1.49.1 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          cat > /tmp/p.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const b = await chromium.launch(); const p = await b.newPage();
+          const xhr = [];
+          p.on('response', r => { const u = r.url(); const ct = r.headers()['content-type'] || ''; if (/json|xml/.test(ct) || /api|o\/|estado|incid/i.test(u)) xhr.push(r.status() + ' ' + ct.slice(0, 30) + ' ' + u.slice(0, 200)); });
+          for (const u of ['https://www.adif.es/viajeros/estado-de-la-red', 'https://www.adif.es/viajeros/avisos']) {
+            xhr.length = 0;
+            await p.goto(u, { waitUntil: 'networkidle', timeout: 60000 }); await p.waitForTimeout(4000);
+            console.log('=================', u);
+            const t = await p.evaluate(() => { const m = document.querySelector('main, #main-content, .portlet-layout') || document.body; return m.innerText; });
+            const i = t.indexOf('Estado de la red'); console.log(t.replace(/\n\s*\n+/g, '\n').slice(0, 7000));
+            console.log('--- peticiones:'); for (const x of xhr.filter(x => !/\.(js|css|png|svg|woff)/.test(x))) console.log('  ', x);
+            const cards = await p.evaluate(() => [...document.querySelectorAll('[class*="aviso-card"], [class*="aviso-estado-red__"]')].slice(0, 5).map(e => e.className + ' :: ' + e.outerHTML.slice(0, 400)));
+            console.log('--- estructura:'); cards.forEach(c => console.log('  ', c.replace(/\s+/g, ' ')));
+          }
+          await b.close();
+          JS
+          node /tmp/p.mjs
