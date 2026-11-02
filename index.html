@@ -1909,12 +1909,14 @@ function hubPath(o, d) {      // camino más corto por la red entre dos ciudades
   }
   const out = []; for (let k = d; k !== o; k = prev[k].u) out.push(prev[k].e); return out;
 }
-function tripAffected(trip) {
+// i0..i1: parte del recorrido que interesa (entre origen y destino del viaje, antes de la llegada, después de la salida)
+function tripAffected(trip, i0 = 0, i1 = trip.stops.length - 1) {
   if (!official.overlays.length) return null;
   cutIntervals();
-  if (affCache.has(trip.id)) return affCache.get(trip.id);
+  const key = trip.id + ':' + i0 + ':' + i1;
+  if (affCache.has(key)) return affCache.get(key);
   let hit = null;
-  for (let i = 0; i < trip.stops.length - 1 && !hit; i++) {
+  for (let i = i0; i < i1 && !hit; i++) {
     const A = stationCoord(trip.stops[i].code), B = stationCoord(trip.stops[i + 1].code); if (!A || !B) continue;
     const sa = nearestOn(EDGES, A), sb = nearestOn(EDGES, B);
     if (sa && sb && sa.d < 3000 && sb.d < 3000 && sa.e === sb.e) { hit = cutOverlap(sa.e, sa.s, sb.s); continue; }
@@ -1922,15 +1924,15 @@ function tripAffected(trip) {
     if (!ha || !hb || ha === hb) continue;
     for (const e of hubPath(ha.id, hb.id) || []) { const iv = cutIntervals().get(e.id); if (iv && iv.reduce((m, [x, y]) => m + (y - x), 0) / e.len >= 0.3) { hit = iv[0][2]; break; } }
   }
-  affCache.set(trip.id, hit);
+  affCache.set(key, hit);
   return hit;
 }
 // Estado de un viaje: en circulación (con su retraso), programado, afectado por un corte o sin posición en directo
-function tripState(trip) {
+function tripState(trip, i0, i1) {
   const t = state.mode === 'live' ? liveOfTrip(trip) : null, now = Date.now();
   const first = trip.stops[0], last = trip.stops[trip.stops.length - 1];
   if (t) { const j = trip.stops.findIndex(s => s.code === t.next); return {t, delay:t.delay, nextIdx:j, kind:'live'}; }
-  const cut = now <= last.arr + 15 * 60000 ? tripAffected(trip) : null;
+  const cut = now <= last.arr + 15 * 60000 ? tripAffected(trip, i0, i1) : null;
   if (cut) return {t:null, delay:0, nextIdx:-1, kind:'cut', item:cut};
   if (now < first.dep) return {t:null, delay:0, nextIdx:0, kind:'plan'};
   if (now <= last.arr + 15 * 60000) return {t:null, delay:0, nextIdx:-1, kind:'nolive'};
@@ -1942,10 +1944,11 @@ function boardSched(st) {
     if (seen.has(trip.id)) continue; seen.add(trip.id);
     const ts = tripState(trip); if (ts.kind === 'done') continue;
     if (ts.kind === 'live' && ts.nextIdx >= 0 && i < ts.nextIdx) continue;     // ya ha pasado por aquí
-    const s = trip.stops[i], first = trip.stops[0], last = trip.stops[trip.stops.length - 1];
-    const base = {t:ts.t, trip, label:trip.label, number:trip.num, cat:trip.cat, delay:ts.delay, kind:ts.kind};
-    if (i > 0) { const est = s.arr + ts.delay * 60000; if (est >= now - 60000 && s.arr <= horizon) arr.push({...base, sched:s.arr, est, other:exactName(first.code)}); }
-    if (i < trip.stops.length - 1) { const est = s.dep + ts.delay * 60000; if (est >= now - 60000 && s.dep <= horizon) dep.push({...base, sched:s.dep, est, other:exactName(last.code)}); }
+    const s = trip.stops[i], first = trip.stops[0], last = trip.stops[trip.stops.length - 1], L = trip.stops.length - 1;
+    const base = {t:ts.t, trip, label:trip.label, number:trip.num, cat:trip.cat, delay:ts.delay};
+    const kindFor = (a, b) => ts.kind === 'live' ? 'live' : tripState(trip, a, b).kind;      // el corte cuenta sólo en la parte que importa
+    if (i > 0) { const est = s.arr + ts.delay * 60000; if (est >= now - 60000 && s.arr <= horizon) arr.push({...base, kind:kindFor(0, i), sched:s.arr, est, other:exactName(first.code)}); }
+    if (i < L) { const est = s.dep + ts.delay * 60000; if (est >= now - 60000 && s.dep <= horizon) dep.push({...base, kind:kindFor(i, L), sched:s.dep, est, other:exactName(last.code)}); }
   }
   const by = (a, b) => a.est - b.est;
   return {arr:arr.sort(by).slice(0, 16), dep:dep.sort(by).slice(0, 16)};
@@ -1957,7 +1960,7 @@ function tripsSched(A, B) {
     if (seen.has(trip.id)) continue;
     const j = trip.stops.findIndex((s, k) => k > i && B.codes.has(s.code)); if (j < 0) continue;
     seen.add(trip.id);
-    const ts = tripState(trip); if (ts.kind === 'done') continue;
+    const ts = tripState(trip, i, j); if (ts.kind === 'done') continue;
     const d = trip.stops[i].dep + ts.delay * 60000, a = trip.stops[j].arr + ts.delay * 60000;
     if (a < now) continue;
     if (ts.kind === 'live' && ts.nextIdx > j) continue;
