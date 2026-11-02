@@ -1,0 +1,57 @@
+name: Publicar web
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '*/10 * * * *'   # refresca la copia de datos de Renfe (GitHub puede retrasar estas ejecuciones)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Construir index.html
+        run: |
+          mkdir -p _site/data
+          node scripts/build.mjs _site/index.html
+
+      - name: Copia de los datos en tiempo real de Renfe
+        continue-on-error: true
+        run: |
+          for f in flotaLD.json trenesConEstacionesLD.json; do
+            if curl -fsSL --retry 2 --max-time 40 -A "TrainViewer (GitHub Pages)" \
+                 -o "_site/data/$f" "https://tiempo-real.largorecorrido.renfe.com/renfe-visor/$f"; then
+              echo "Descargado $f ($(wc -c < "_site/data/$f") bytes)"
+            else
+              echo "::warning::No se pudo descargar $f"
+              rm -f "_site/data/$f"
+            fi
+          done
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

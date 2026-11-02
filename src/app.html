@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrainViewer · Red ferroviaria</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#05080d; --panel:#0a0f18; --panel-2:#0f1622; --panel-3:#141d2b; --line:#182131; --line-2:#243146;
+  --text:#e7edf5; --muted:#8a98ad; --dim:#56657b;
+  --ok:#22c55e; --warn:#facc15; --crit:#ef4444; --info:#38bdf8; --late:#fb923c;
+  --av:#38bdf8; --ld:#f472b6; --md:#a78bfa; --fr:#e2e8f0;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font:13px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  display:grid;grid-template-columns:384px 1fr;height:100vh;height:100dvh;overflow:hidden;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+a{color:var(--info)}
+
+/* ---------- Panel ---------- */
+#panel{display:flex;flex-direction:column;min-height:0;background:var(--panel);border-right:1px solid var(--line);z-index:1000;position:relative}
+.top{padding:14px 16px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
+.brand{display:flex;align-items:center;gap:11px}
+.logo{flex:none;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:var(--panel-3);border:1px solid var(--line-2)}
+.brand h1{font-size:13.5px;font-weight:600;letter-spacing:.01em;line-height:1.25}
+.brand p{font-size:11px;color:var(--muted)}
+.clockbox{margin-left:auto;text-align:right}
+#clock{font:500 18px var(--mono);letter-spacing:.01em;line-height:1.1}
+.conn{display:inline-flex;align-items:center;gap:6px;font:600 9.5px Inter,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+.conn i{width:7px;height:7px;border-radius:50%;background:var(--dim)}
+.conn.live{color:var(--ok)} .conn.live i{background:var(--ok);animation:live 1.8s infinite}
+.conn.sim{color:var(--warn)} .conn.sim i{background:var(--warn)}
+.conn.err{color:var(--crit)} .conn.err i{background:var(--crit)}
+.conn.wait i{background:var(--info);animation:blink 1s infinite}
+
+.search{position:relative}
+.search input{width:100%;background:var(--panel-2);border:1px solid var(--line-2);border-radius:9px;padding:8px 10px 8px 32px;outline:none;transition:border-color .15s}
+.search input:focus{border-color:#3b4d68}
+.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--dim)}
+#results{position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--panel-2);border:1px solid var(--line-2);border-radius:10px;box-shadow:0 14px 40px rgba(0,0,0,.6);overflow:hidden;display:none;z-index:5}
+#results.open{display:block}
+#results button{display:flex;width:100%;align-items:center;gap:9px;padding:8px 11px;background:none;border:0;text-align:left;cursor:pointer;border-top:1px solid var(--line)}
+#results button:first-child{border-top:0}
+#results button:hover,#results button.hl{background:var(--panel-3)}
+#results small{color:var(--muted);margin-left:auto;font-size:11px;white-space:nowrap}
+#results .none{padding:10px 12px;color:var(--muted)}
+
+.tabs{display:flex;gap:2px;padding:0 10px;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;background:none;border:0;padding:10px 4px 9px;color:var(--muted);font-weight:500;font-size:12.5px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;display:flex;justify-content:center;gap:6px;align-items:center}
+.tabs button:hover{color:var(--text)}
+.tabs button.on{color:var(--text);border-bottom-color:var(--info)}
+.tabs .cnt{font:500 10.5px var(--mono);background:var(--panel-3);border-radius:99px;padding:1px 6px;color:var(--muted)}
+.body{flex:1;min-height:0;position:relative}
+.view{position:absolute;inset:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line-2) transparent;display:none}
+.view.on{display:block}
+.sec{padding:14px 16px;border-bottom:1px solid var(--line)}
+.sec:last-child{border-bottom:0}
+.sec-title{display:flex;justify-content:space-between;align-items:center;font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px}
+.sec-title span{font:500 10.5px var(--mono);letter-spacing:0;color:var(--dim);text-transform:none}
+
+.hero{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px}
+.hero .big{display:block;font:600 44px/1 var(--mono);letter-spacing:-.03em}
+.hero .lbl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+.hero .sub{font-size:11.5px;color:var(--muted);margin-top:6px}
+.mix{display:grid;grid-template-columns:auto auto;gap:3px 10px;font:500 11.5px var(--mono);align-items:center}
+.mix span{display:flex;align-items:center;gap:6px;color:var(--muted)}
+.mix i{width:8px;height:8px;border-radius:50%}
+.mix b{text-align:right;color:var(--text)}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpi{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:9px 10px;min-width:0}
+.kpi small{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi b{font:600 18px var(--mono)}
+.kpi em{font-style:normal;font-size:11px;color:var(--muted);margin-left:2px}
+#k-inc.has{color:var(--crit)}
+.bar{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--line);gap:2px}
+.bar i{display:block;height:100%;transition:width .6s ease;min-width:0}
+.blegend{display:grid;grid-template-columns:repeat(2,1fr);gap:4px 12px;margin-top:9px;font-size:11.5px;color:var(--muted)}
+.blegend span{display:flex;align-items:center;gap:7px}
+.blegend i{width:7px;height:7px;border-radius:50%;flex:none}
+.blegend b{margin-left:auto;font:500 11.5px var(--mono);color:var(--text)}
+
+.flt{display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer;user-select:none}
+.flt input{appearance:none;-webkit-appearance:none;flex:none;width:30px;height:17px;border-radius:99px;background:var(--line-2);position:relative;cursor:pointer;transition:background .2s;margin:0}
+.flt input::before{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#94a3b8;transition:transform .2s,background .2s}
+.flt input:checked{background:var(--c,var(--info))}
+.flt input:checked::before{transform:translateX(13px);background:#05080d}
+.flt input:focus-visible{outline:2px solid var(--info);outline-offset:2px}
+.flt .name{flex:1;display:flex;align-items:center;gap:9px}
+.flt .dot{width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px #05080d,0 0 0 3px color-mix(in srgb,var(--c) 40%,transparent)}
+.flt b{font:600 12px var(--mono);color:var(--muted);min-width:24px;text-align:right}
+.flt.disabled{opacity:.45}
+.flt .note{font-size:10.5px;color:var(--dim)}
+.sep{height:1px;background:var(--line);margin:6px 0}
+
+/* Lista de trenes */
+.tl-tools{display:flex;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:2}
+.tl-tools input,.tl-tools select{background:var(--panel-2);border:1px solid var(--line-2);border-radius:8px;padding:6px 9px;outline:none;min-width:0}
+.tl-tools input{flex:1}
+.row{display:grid;grid-template-columns:10px 1fr auto;gap:10px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line);cursor:pointer;width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left}
+.row:hover{background:var(--panel-2)}
+.row .d{width:9px;height:9px;border-radius:50%}
+.row .t1{font-weight:600;font-size:12.5px;display:flex;gap:6px;align-items:baseline}
+.row .t1 small{font:500 11px var(--mono);color:var(--muted)}
+.row .t2{color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{font:600 11px var(--mono);padding:2px 7px;border-radius:6px;background:var(--panel-3);color:var(--muted);white-space:nowrap}
+.pill.ok{color:var(--ok);background:rgba(34,197,94,.1)}
+.pill.warn{color:var(--warn);background:rgba(250,204,21,.1)}
+.pill.late{color:var(--late);background:rgba(251,146,60,.12)}
+.pill.crit{color:#fca5a5;background:rgba(239,68,68,.15)}
+.empty{padding:28px 16px;text-align:center;color:var(--muted)}
+
+/* Registro */
+#log{list-style:none}
+#log li{display:grid;grid-template-columns:40px 1fr;gap:8px;padding:9px 16px 9px 14px;border-left:2px solid transparent;border-bottom:1px solid var(--line);animation:slide .35s ease}
+#log li.clk{cursor:pointer}
+#log li.clk:hover{background:var(--panel-2)}
+#log time{font:500 11px var(--mono);color:var(--dim);padding-top:1px}
+#log .t{font-weight:600;font-size:12.5px;display:flex;gap:6px;align-items:center}
+#log .t::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--lc);flex:none}
+#log .dd{color:var(--muted);font-size:12px}
+#log .crit{--lc:var(--crit);border-left-color:var(--crit)}
+#log .warn{--lc:var(--warn);border-left-color:rgba(250,204,21,.55)}
+#log .ok{--lc:var(--ok);border-left-color:rgba(34,197,94,.45)}
+#log .info{--lc:var(--info);border-left-color:rgba(56,189,248,.4)}
+#log .late{--lc:var(--late);border-left-color:rgba(251,146,60,.5)}
+
+/* Vista estación */
+#station{background:var(--panel);z-index:3}
+.st-head{position:sticky;top:0;background:var(--panel);z-index:2;padding:14px 16px 12px;border-bottom:1px solid var(--line)}
+.st-head .back{display:inline-flex;align-items:center;gap:6px;background:none;border:0;color:var(--muted);cursor:pointer;font-size:12px;padding:0;margin-bottom:10px}
+.st-head .back:hover{color:var(--text)}
+.st-head h2{font-size:19px;font-weight:600;letter-spacing:-.01em;line-height:1.2}
+.st-head .meta{display:flex;gap:8px;align-items:center;margin-top:5px;color:var(--muted);font-size:11.5px;flex-wrap:wrap}
+.st-head .meta .pill{font-size:10.5px}
+.brd h3{display:flex;align-items:center;gap:8px;font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;padding:14px 16px 8px}
+.brd h3 svg{color:var(--dim)}
+.brow{display:grid;grid-template-columns:62px 1fr auto;gap:10px;align-items:center;padding:9px 16px;border-top:1px solid var(--line);cursor:pointer;width:100%;background:none;border-left:0;border-right:0;border-bottom:0;text-align:left}
+.brow:hover{background:var(--panel-2)}
+.brow .cd{font:600 15px var(--mono);line-height:1.1}
+.brow .cd small{display:block;font:500 10px Inter,sans-serif;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.brow .cd.now{color:var(--ok)}
+.brow .who{min-width:0}
+.brow .who b{display:block;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brow .who span{display:flex;gap:6px;align-items:center;color:var(--muted);font-size:11.5px}
+.brow .who i{width:7px;height:7px;border-radius:50%;flex:none}
+.brow .tm{text-align:right;font:500 12px var(--mono)}
+.brow .tm s{color:var(--dim);display:block;font-size:11px}
+.brd .none{padding:12px 16px 4px;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}
+.more{display:flex;flex-direction:column;gap:8px;padding:16px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border-radius:10px;background:var(--info);color:#05131f;font-weight:600;text-decoration:none;border:0;cursor:pointer}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:var(--panel-2);color:var(--text);border:1px solid var(--line-2);font-weight:500}
+.more p{font-size:11.5px;color:var(--dim);text-align:center}
+.st-note{margin:12px 16px 0;padding:9px 11px;border-radius:9px;background:var(--panel-2);border:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+
+/* Fuente de datos */
+.foot{border-top:1px solid var(--line);background:var(--panel)}
+.foot summary{list-style:none;display:flex;align-items:center;gap:8px;padding:10px 16px;cursor:pointer;font-size:11.5px;color:var(--muted)}
+.foot summary::-webkit-details-marker{display:none}
+.foot summary b{color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.foot summary .chev{margin-left:auto;transition:transform .2s}
+.foot[open] summary .chev{transform:rotate(180deg)}
+.foot .cfg{padding:2px 16px 14px;display:flex;flex-direction:column;gap:10px}
+.foot label.f{display:flex;flex-direction:column;gap:5px;font-size:11px;color:var(--muted)}
+.foot select,.foot input[type=text]{background:var(--panel-2);border:1px solid var(--line-2);border-radius:8px;padding:7px 9px;outline:none;width:100%}
+.foot .ck{display:flex;gap:8px;align-items:flex-start;font-size:11.5px;color:var(--muted);cursor:pointer}
+.foot .ck input{margin-top:2px}
+.foot .diag{font:500 11px var(--mono);color:var(--dim);line-height:1.6;white-space:pre-wrap}
+.speed{display:flex;gap:2px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:2px}
+.speed button{flex:1;background:none;border:0;color:var(--muted);font:500 11.5px var(--mono);padding:5px 0;border-radius:6px;cursor:pointer}
+.speed button.on{background:var(--line-2);color:var(--text)}
+body:not(.mode-sim) .sim-only{display:none!important}
+
+/* ---------- Mapa ---------- */
+#map{height:100%;background:var(--bg)}
+.leaflet-container{font:inherit;background:var(--bg)}
+.leaflet-tile-pane{filter:brightness(.92) contrast(1.05) saturate(.6)}
+.leaflet-bar{border:1px solid var(--line-2)!important;box-shadow:0 4px 18px rgba(0,0,0,.4)!important;border-radius:9px!important;overflow:hidden}
+.leaflet-bar a{background:var(--panel)!important;color:var(--text)!important;border-bottom-color:var(--line)!important}
+.leaflet-bar a:hover{background:var(--panel-2)!important}
+.leaflet-control-attribution{background:rgba(5,8,13,.75)!important;color:var(--dim)!important;font-size:10px!important}
+.leaflet-control-attribution a{color:var(--muted)!important}
+.trk-core.trk-cut{stroke-dasharray:5 7;animation:dash .9s linear infinite}
+.trk-glow.glow-alert{animation:glow 1.5s ease-in-out infinite}
+.trk-glow:hover{stroke-width:16px}
+.tdot{transition:stroke .3s}
+.tdot.held{animation:held 1.2s ease-in-out infinite}
+.stn{cursor:pointer}
+.leaflet-tooltip.st-label{background:none;border:0;box-shadow:none;padding:0 0 0 2px;color:#b6c2d3;font:500 10.5px Inter,system-ui,sans-serif;text-shadow:0 0 2px #000,0 0 6px #000,0 0 10px #05080d;white-space:nowrap}
+.leaflet-tooltip.st-label::before{display:none}
+.leaflet-tooltip.st-major{color:#eef3f9;font-weight:600;font-size:11.5px}
+.leaflet-tooltip.st-minor,.leaflet-tooltip.st-extra{display:none}
+#map.z7 .leaflet-tooltip.st-minor{display:block}
+#map.z9 .leaflet-tooltip.st-extra{display:block}
+#map.no-labels .leaflet-tooltip.st-label{display:none!important}
+.leaflet-tooltip.ttip{background:rgba(10,15,24,.96);color:var(--text);border:1px solid var(--line-2);border-radius:7px;box-shadow:0 6px 18px rgba(0,0,0,.5);font:500 11.5px Inter,sans-serif;padding:4px 8px}
+.leaflet-tooltip.ttip::before{display:none}
+
+.dark-popup .leaflet-popup-content-wrapper{background:rgba(10,15,24,.97);color:var(--text);border:1px solid var(--line-2);border-radius:12px;box-shadow:0 14px 44px rgba(0,0,0,.65)}
+.dark-popup .leaflet-popup-tip{background:rgba(10,15,24,.97);border:1px solid var(--line-2);box-shadow:none}
+.dark-popup .leaflet-popup-content{margin:14px 16px 13px;line-height:1.4}
+.leaflet-container a.leaflet-popup-close-button{color:var(--muted);top:6px;right:6px}
+.pp-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-right:16px}
+.pp-badge{font:600 10.5px var(--mono);letter-spacing:.05em;text-transform:uppercase;padding:3px 7px;border-radius:5px;color:#05080d;background:var(--c,var(--info))}
+.pp-num{font:600 14px var(--mono)}
+.pp-title{font-weight:600;font-size:13.5px}
+.pp-od{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:8px}
+.pp-od .r{text-align:right}
+.pp small{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.pp-od b{font-size:14px;font-weight:600}
+.pp-arrow{color:var(--dim)}
+.pp-prog{height:4px;border-radius:9px;background:var(--line-2);margin:10px 0 12px;overflow:hidden}
+.pp-prog i{display:block;height:100%;background:linear-gradient(90deg,var(--line-2),var(--text));border-radius:9px}
+.pp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.pp-grid b{font-size:13px;font-weight:600}
+.pp-grid b.big{font:600 20px var(--mono)}
+.pp-grid em{font-style:normal;font-size:11px;color:var(--muted);margin-left:3px;font-family:Inter,sans-serif;font-weight:500}
+.c-ok{color:var(--ok)} .c-warn{color:var(--warn)} .c-crit{color:var(--crit)} .c-late{color:var(--late)}
+.pp-status{display:flex;align-items:center;gap:8px;margin-top:12px;padding:7px 10px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line);font-size:12px;font-weight:500}
+.pp-status span{width:7px;height:7px;border-radius:50%;background:var(--sc);flex:none}
+.s-run{--sc:var(--ok)} .s-warn{--sc:var(--warn)} .s-held{--sc:var(--crit)} .s-dwell{--sc:var(--info)}
+.pp-stops{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.pp-stops div{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:2px 0;color:var(--muted)}
+.pp-stops div b{color:var(--text);font-weight:500}
+.pp-stops div span{font-family:var(--mono)}
+.pp-foot{margin-top:9px;font-size:11px;color:var(--dim)}
+
+.legend{background:rgba(10,15,24,.92);border:1px solid var(--line-2);border-radius:10px;padding:10px 12px;color:var(--text);font-size:11.5px;box-shadow:0 6px 24px rgba(0,0,0,.45);backdrop-filter:blur(6px);max-width:250px}
+.legend .lt{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px}
+.legend .r{display:flex;align-items:center;gap:9px;padding:2px 0}
+.legend .ln{width:22px;height:3px;border-radius:2px;flex:none}
+.legend .ln.dash{background:repeating-linear-gradient(90deg,var(--crit) 0 5px,transparent 5px 9px)}
+.legend .pt{width:9px;height:9px;border-radius:50%;flex:none;margin:0 6px;box-shadow:0 0 0 1.5px #05080d}
+.legend .s{height:1px;background:var(--line);margin:7px 0}
+.legend .note{color:var(--dim);font-size:10.5px;margin-top:6px}
+.banner{background:rgba(10,15,24,.94);border:1px solid var(--line-2);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--muted);box-shadow:0 6px 24px rgba(0,0,0,.45);max-width:420px;display:none}
+.banner.on{display:block}
+.banner b{color:var(--text)}
+
+@keyframes live{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}70%{box-shadow:0 0 0 7px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+@keyframes blink{50%{opacity:.3}}
+@keyframes dash{to{stroke-dashoffset:-24}}
+@keyframes glow{50%{stroke-opacity:.06}}
+@keyframes held{50%{stroke-opacity:.25}}
+@keyframes slide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
+@media (max-width:820px){
+  body{grid-template-columns:1fr;grid-template-rows:55vh 1fr;grid-template-rows:55dvh 1fr}
+  #map{grid-row:1}
+  #panel{grid-row:2;border-right:0;border-top:1px solid var(--line)}
+  .legend,.banner.on{display:none}
+  .top{padding:10px 14px}
+  .brand p{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:0s!important;transition:none!important}}
+</style>
+</head>
+<body class="mode-wait">
+
+<aside id="panel" aria-label="Panel de control">
+  <div class="top">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="13" rx="3" stroke="#38bdf8"/><path d="M5 10h14M9 16l-3 5M15 16l3 5" stroke="#22c55e"/></svg>
+      </div>
+      <div>
+        <h1>TrainViewer</h1>
+        <p>Red de España</p>
+      </div>
+      <div class="clockbox">
+        <div id="clock">--:--:--</div>
+        <div class="conn wait" id="conn"><i></i><span>Conectando</span></div>
+      </div>
+    </div>
+    <div class="search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Buscar estación o tren (p. ej. Sevilla, 03061)" autocomplete="off" aria-label="Buscar estación o tren">
+      <div id="results" role="listbox"></div>
+    </div>
+  </div>
+
+  <nav class="tabs" role="tablist">
+    <button class="on" data-tab="resumen" role="tab">Resumen</button>
+    <button data-tab="trenes" role="tab">Trenes <span class="cnt" id="t-cnt">0</span></button>
+    <button data-tab="registro" role="tab">Registro <span class="cnt" id="l-cnt">0</span></button>
+  </nav>
+
+  <div class="body">
+    <section class="view on" id="v-resumen">
+      <div class="sec">
+        <div class="hero">
+          <div>
+            <div class="lbl">Trenes en circulación</div>
+            <b class="big" id="k-total">0</b>
+            <div class="sub" id="k-visible">–</div>
+          </div>
+          <div class="mix">
+            <span><i style="background:var(--av)"></i>Alta Vel.</span><b id="m-av">0</b>
+            <span><i style="background:var(--ld)"></i>Larga Dist.</span><b id="m-ld">0</b>
+            <span><i style="background:var(--md)"></i>Media Dist.</span><b id="m-md">0</b>
+            <span><i style="background:var(--fr)"></i>Mercancías</span><b id="m-fr">0</b>
+          </div>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><small>Puntualidad</small><b id="k-punct">–</b></div>
+          <div class="kpi"><small>Retraso medio</small><b id="k-delay">–</b></div>
+          <div class="kpi"><small>Incidencias</small><b id="k-inc">0</b></div>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-title">Retrasos <span id="d-note">trenes en circulación</span></div>
+        <div class="bar"><i id="db-0" style="background:var(--ok)"></i><i id="db-1" style="background:var(--warn)"></i><i id="db-2" style="background:var(--late)"></i><i id="db-3" style="background:var(--crit)"></i></div>
+        <div class="blegend">
+          <span><i style="background:var(--ok)"></i>Puntual &lt;5′<b id="dl-0">0</b></span>
+          <span><i style="background:var(--warn)"></i>5–15′<b id="dl-1">0</b></span>
+          <span><i style="background:var(--late)"></i>15–30′<b id="dl-2">0</b></span>
+          <span><i style="background:var(--crit)"></i>&gt;30′<b id="dl-3">0</b></span>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-title">Estado de la red <span id="net-total"></span></div>
+        <div class="bar"><i id="nb-ok" style="background:var(--ok)"></i><i id="nb-warn" style="background:var(--warn)"></i><i id="nb-cut" style="background:var(--crit)"></i></div>
+        <div class="blegend">
+          <span><i style="background:var(--ok)"></i>Normal<b id="nl-ok">0</b></span>
+          <span><i style="background:var(--warn)"></i>Precaución<b id="nl-warn">0</b></span>
+          <span><i style="background:var(--crit)"></i>Interrumpido<b id="nl-cut">0</b></span>
+          <span style="color:var(--dim)" id="net-mode">km</span>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-title">Mostrar en el mapa</div>
+        <label class="flt" style="--c:var(--av)"><input type="checkbox" data-cat="av" checked><span class="name"><i class="dot"></i>Alta Velocidad</span><b id="c-av">0</b></label>
+        <label class="flt" style="--c:var(--ld)"><input type="checkbox" data-cat="ld" checked><span class="name"><i class="dot"></i>Larga Distancia</span><b id="c-ld">0</b></label>
+        <label class="flt" style="--c:var(--md)"><input type="checkbox" data-cat="md" checked><span class="name"><i class="dot"></i>Media Distancia</span><b id="c-md">0</b></label>
+        <label class="flt" style="--c:var(--fr)" id="flt-fr"><input type="checkbox" data-cat="fr" checked><span class="name"><i class="dot"></i>Mercancías <span class="note" id="fr-note"></span></span><b id="c-fr">0</b></label>
+        <div class="sep"></div>
+        <label class="flt" style="--c:#94a3b8"><input type="checkbox" id="f-labels" checked><span class="name">Nombres de estaciones</span></label>
+      </div>
+    </section>
+
+    <section class="view" id="v-trenes">
+      <div class="tl-tools">
+        <input id="tq" type="search" placeholder="Filtrar por número, origen o destino" aria-label="Filtrar trenes">
+        <select id="tsort" aria-label="Ordenar">
+          <option value="delay">Más retraso</option>
+          <option value="num">Número</option>
+          <option value="cat">Tipo</option>
+        </select>
+      </div>
+      <div id="tlist"></div>
+    </section>
+
+    <section class="view" id="v-registro"><ul id="log" aria-live="polite"></ul></section>
+
+    <section class="view" id="station" aria-live="polite"></section>
+  </div>
+
+  <details class="foot" id="foot">
+    <summary>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+      Fuente: <b id="src-sum">–</b>
+      <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 15 6-6 6 6"/></svg>
+    </summary>
+    <div class="cfg">
+      <label class="f">Modo de datos
+        <select id="s-mode">
+          <option value="auto">Automático · tiempo real con respaldo simulado</option>
+          <option value="live">Solo tiempo real (Renfe)</option>
+          <option value="sim">Solo simulación</option>
+        </select>
+      </label>
+      <label class="f">Proxy CORS propio (opcional)
+        <input type="text" id="s-proxy" placeholder="http://localhost:8787/?url={url}" spellcheck="false">
+      </label>
+      <label class="ck"><input type="checkbox" id="s-pub"> Permitir proxies CORS públicos (allorigins, codetabs) si la conexión directa falla</label>
+      <label class="f">Mapa base
+        <select id="s-base">
+          <option value="tiles">CARTO oscuro (con respaldo integrado)</option>
+          <option value="embedded">Sólo mapa integrado (sin conexión)</option>
+        </select>
+      </label>
+      <div class="sim-only">
+        <label class="f">Velocidad de simulación</label>
+        <div class="speed" id="speed">
+          <button data-s="0">❚❚</button><button data-s="1" class="on">×1</button><button data-s="10">×10</button><button data-s="60">×60</button><button data-s="240">×240</button>
+        </div>
+      </div>
+      <div class="diag" id="diag"></div>
+    </div>
+  </details>
+</aside>
+
+<main id="map" aria-label="Mapa de la red ferroviaria"></main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+(() => {
+'use strict';
+if (!window.L) { document.getElementById('map').innerHTML = '<div style="padding:40px;color:#8a98ad">No se pudo cargar Leaflet (cdnjs.cloudflare.com). Comprueba la conexión a internet.</div>'; return; }
+
+/* =====================================================================
+   0. CONFIGURACIÓN
+   ===================================================================== */
+const CFG = {
+  FLOTA: 'https://tiempo-real.largorecorrido.renfe.com/renfe-visor/flotaLD.json',
+  RUTAS: 'https://tiempo-real.largorecorrido.renfe.com/renfe-visor/trenesConEstacionesLD.json',
+  POLL_MS: 15000, ROUTES_MS: 180000, RETRY_MS: 60000, TIMEOUT_MS: 12000,
+  PUBLIC_PROXIES: [
+    {name:'allorigins',   build:u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u)},
+    {name:'codetabs',     build:u => 'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(u)},
+  ],
+  ADIF_BOARD: code => 'https://info.adif.es/?s=' + code,
+  ADIF_STATIONS: 'https://www.adif.es/viajeros/estaciones',
+  RENFE_LIVE: 'https://tiempo-real.renfe.com/',
+};
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('cfe.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('cfe.' + k, JSON.stringify(v)); } catch {} },
+};
+const settings = { mode:store.get('mode', 'auto'), proxy:store.get('proxy', ''), pub:store.get('pub', true), base:store.get('base', 'tiles') };
+
+/* =====================================================================
+   1. DATOS ESTÁTICOS
+   ===================================================================== */
+const EMBED = /*__EMBED__*/null;
+
+// Estaciones de la red dibujada. k: códigos Adif/Renfe (el primero abre el panel de Adif)
+const ST = {
+  MAD:{n:'Madrid',c:[40.4065,-3.6895],m:1,k:['60000','17000','18000']}, GUA:{n:'Guadalajara',c:[40.6230,-3.1600],k:['04007','70200']},
+  CAL:{n:'Calatayud',c:[41.3530,-1.6430],k:['70600']}, ZAR:{n:'Zaragoza',c:[41.6586,-0.9110],m:1,k:['04040']},
+  HUE:{n:'Huesca',c:[42.1340,-0.4110],k:['74200']}, LLE:{n:'Lleida',c:[41.6200,0.6330],m:1,k:['78400']},
+  CTA:{n:'Camp de Tarragona',c:[41.1915,1.2710],k:['04104']}, TAR:{n:'Tarragona',c:[41.1110,1.2530],k:['71500']},
+  BCN:{n:'Barcelona',c:[41.3791,2.1400],m:1,k:['71801','79400','71802']}, GIR:{n:'Girona',c:[41.9794,2.8170],k:['79300']},
+  FIG:{n:'Figueres',c:[42.2660,2.9600],k:['04307','79309']}, CUE:{n:'Cuenca',c:[40.0300,-2.1300],k:['03208']},
+  MOT:{n:'Bif. Motilla',c:[39.5600,-1.8900],j:1,k:[]}, VLC:{n:'Valencia',c:[39.4600,-0.3820],m:1,k:['03216','65000']},
+  ALB:{n:'Albacete',c:[38.9990,-1.8530],m:1,k:['60600']}, ALC:{n:'Alicante',c:[38.3450,-0.4950],m:1,k:['60911']},
+  MUR:{n:'Murcia',c:[37.9750,-1.1290],m:1,k:['61200']}, CAR:{n:'Cartagena',c:[37.6050,-0.9850],k:['61307']},
+  CAS:{n:'Castellón',c:[39.9870,-0.0530],k:['65300']}, TER:{n:'Teruel',c:[40.3400,-1.1070],k:['67200']},
+  XAT:{n:'Xàtiva',c:[38.9900,-0.5200],k:['64100']}, CRE:{n:'Ciudad Real',c:[38.9860,-3.9270],k:['37200']},
+  PUE:{n:'Puertollano',c:[38.6870,-4.1100],k:['37700']}, COR:{n:'Córdoba',c:[37.8890,-4.7890],m:1,k:['50500']},
+  SEV:{n:'Sevilla',c:[37.3920,-5.9750],m:1,k:['51003']}, ANT:{n:'Antequera',c:[37.0190,-4.5600],k:['02003','02030']},
+  MAL:{n:'Málaga',c:[36.7110,-4.4320],m:1,k:['54413']}, GRA:{n:'Granada',c:[37.1840,-3.6100],m:1,k:['05000']},
+  ALG:{n:'Algeciras',c:[36.1300,-5.4500],k:['55020']}, CAD:{n:'Cádiz',c:[36.5290,-6.2900],k:['51405']},
+  HUL:{n:'Huelva',c:[37.2580,-6.9480],k:['43019']}, JAE:{n:'Jaén',c:[37.7720,-3.7900],k:['03100']},
+  LIN:{n:'Linares-Baeza',c:[38.0700,-3.6400],k:['50300']}, ALM:{n:'Almería',c:[36.8350,-2.4560],k:['56312']},
+  ALZ:{n:'Alcázar de San Juan',c:[39.3900,-3.2080],k:['60400']}, ARA:{n:'Aranjuez',c:[40.0360,-3.6050],k:['60200']},
+  TOL:{n:'Toledo',c:[39.8620,-4.0110],k:['92102']}, TAL:{n:'Talavera',c:[39.9600,-4.8300],k:['35200']},
+  PLA:{n:'Plasencia',c:[40.0300,-6.0900],k:['30002']}, CAC:{n:'Cáceres',c:[39.4740,-6.3730],k:['35400']},
+  MER:{n:'Mérida',c:[38.9200,-6.3500],k:['37500']}, BAD:{n:'Badajoz',c:[38.8850,-6.9830],m:1,k:['37606']},
+  ZAF:{n:'Zafra',c:[38.4250,-6.4180],k:['40100','40008']}, SEG:{n:'Segovia',c:[40.9100,-4.0900],k:['08004','12100']},
+  AVI:{n:'Ávila',c:[40.6560,-4.6820],k:['10400']}, OLM:{n:'Bif. Olmedo',c:[41.2870,-4.6830],j:1,k:[]},
+  MED:{n:'Medina del Campo',c:[41.3100,-4.9100],k:['10500','08240']}, VAL:{n:'Valladolid',c:[41.6440,-4.7290],m:1,k:['10600']},
+  SAL:{n:'Salamanca',c:[40.9700,-5.6640],k:['30100','30110']}, ZAM:{n:'Zamora',c:[41.5100,-5.7400],k:['30200']},
+  PAL:{n:'Palencia',c:[42.0100,-4.5300],k:['14100']}, LEO:{n:'León',c:[42.5960,-5.5800],m:1,k:['15100']},
+  OVI:{n:'Oviedo',c:[43.3670,-5.8560],m:1,k:['15211']}, GIJ:{n:'Gijón',c:[43.5370,-5.6720],k:['15410']},
+  SAN:{n:'Santander',c:[43.4570,-3.8100],m:1,k:['14223']}, BUR:{n:'Burgos',c:[42.3700,-3.6670],k:['11014']},
+  MIR:{n:'Miranda de Ebro',c:[42.6830,-2.9470],k:['11200']}, VIT:{n:'Vitoria',c:[42.8410,-2.6730],k:['11208']},
+  BIL:{n:'Bilbao',c:[43.2600,-2.9270],m:1,k:['13200']}, SSB:{n:'San Sebastián',c:[43.3170,-1.9770],m:1,k:['11511']},
+  IRU:{n:'Irún',c:[43.3390,-1.8000],k:['11600']}, LOG:{n:'Logroño',c:[42.4600,-2.4400],k:['81100']},
+  CAJ:{n:'Castejón',c:[42.1700,-1.6900],k:['81200']}, PAM:{n:'Pamplona',c:[42.8130,-1.6600],k:['80100']},
+  PON:{n:'Ponferrada',c:[42.5460,-6.5970],k:['20200']}, MON:{n:'Monforte',c:[42.5200,-7.5100],k:['20300']},
+  LUG:{n:'Lugo',c:[43.0100,-7.5450],k:['20309']}, OUR:{n:'Ourense',c:[42.3510,-7.8730],k:['22100']},
+  SCQ:{n:'Santiago',c:[42.8700,-8.5440],m:1,k:['31400']}, COU:{n:'A Coruña',c:[43.3540,-8.4080],m:1,k:['31412']},
+  PNT:{n:'Pontevedra',c:[42.4220,-8.6340],k:['23004']}, VGO:{n:'Vigo',c:[42.2350,-8.7130],m:1,k:['08223','22308']},
+};
+
+const LINES = [
+  {name:'LAV Madrid – Barcelona – Frontera', type:'av', vmax:300, path:['MAD','GUA','CAL','ZAR','LLE','CTA','BCN','GIR','FIG']},
+  {name:'LAV Zaragoza – Huesca',             type:'av', vmax:200, path:['ZAR','HUE']},
+  {name:'LAV Madrid – Levante',              type:'av', vmax:300, path:['MAD','CUE','MOT','VLC']},
+  {name:'LAV Levante · Albacete – Murcia',   type:'av', vmax:300, path:['MOT','ALB','ALC','MUR']},
+  {name:'LAV Madrid – Toledo',               type:'av', vmax:250, path:['MAD','TOL']},
+  {name:'LAV Madrid – Sevilla',              type:'av', vmax:300, path:['MAD','CRE','PUE','COR','SEV']},
+  {name:'LAV Córdoba – Málaga',              type:'av', vmax:300, path:['COR','ANT','MAL']},
+  {name:'LAV Antequera – Granada',           type:'av', vmax:250, path:['ANT','GRA']},
+  {name:'LAV Madrid – Valladolid – León',    type:'av', vmax:300, path:['MAD','SEG','OLM','VAL','PAL','LEO']},
+  {name:'LAV Valladolid – Burgos',           type:'av', vmax:300, path:['VAL','BUR']},
+  {name:'Variante de Pajares',               type:'av', vmax:250, path:['LEO','OVI']},
+  {name:'LAV Madrid – Galicia',              type:'av', vmax:300, path:['OLM','ZAM','OUR','SCQ','COU']},
+  {name:'Eje Atlántico',                     type:'av', vmax:250, path:['SCQ','PNT','VGO']},
+  {name:'Corredor Mediterráneo',             type:'conv', vmax:200, path:['VLC','CAS','TAR','BCN']},
+  {name:'Madrid – Alcázar – Valencia',       type:'conv', vmax:160, path:['MAD','ARA','ALZ','ALB','XAT','VLC']},
+  {name:'Xàtiva – Alicante',                 type:'conv', vmax:140, path:['XAT','ALC']},
+  {name:'Murcia – Cartagena',                type:'conv', vmax:120, path:['MUR','CAR']},
+  {name:'Alcázar – Linares – Córdoba',       type:'conv', vmax:160, path:['ALZ','LIN','COR']},
+  {name:'Linares – Jaén',                    type:'conv', vmax:120, path:['LIN','JAE']},
+  {name:'Linares – Granada – Almería',       type:'conv', vmax:120, path:['LIN','GRA','ALM']},
+  {name:'Bobadilla – Algeciras',             type:'conv', vmax:120, path:['ANT','ALG']},
+  {name:'Sevilla – Cádiz',                   type:'conv', vmax:160, path:['SEV','CAD']},
+  {name:'Sevilla – Huelva',                  type:'conv', vmax:120, path:['SEV','HUL']},
+  {name:'Sevilla – Zafra – Mérida',          type:'conv', vmax:120, path:['SEV','ZAF','MER']},
+  {name:'Madrid – Extremadura',              type:'conv', vmax:160, path:['MAD','TAL','PLA','CAC','MER','BAD']},
+  {name:'Valencia – Teruel – Zaragoza',      type:'conv', vmax:100, path:['VLC','TER','ZAR']},
+  {name:'Lleida – Reus – Tarragona',         type:'conv', vmax:120, path:['LLE','TAR']},
+  {name:'Zaragoza – Logroño – Miranda',      type:'conv', vmax:160, path:['ZAR','CAJ','LOG','MIR']},
+  {name:'Castejón – Pamplona – Alsasua',     type:'conv', vmax:140, path:['CAJ','PAM','SSB']},
+  {name:'Madrid – Ávila – Valladolid',       type:'conv', vmax:160, path:['MAD','AVI','MED','VAL']},
+  {name:'Madrid – Hendaya (norte)',          type:'conv', vmax:160, path:['PAL','BUR','MIR','VIT','SSB','IRU']},
+  {name:'Miranda – Bilbao',                  type:'conv', vmax:120, path:['MIR','BIL']},
+  {name:'Medina – Salamanca',                type:'conv', vmax:140, path:['MED','SAL']},
+  {name:'Palencia – Santander',              type:'conv', vmax:120, path:['PAL','SAN']},
+  {name:'Oviedo – Gijón',                    type:'conv', vmax:120, path:['OVI','GIJ']},
+  {name:'León – Ponferrada – Ourense',       type:'conv', vmax:140, path:['LEO','PON','MON','OUR']},
+  {name:'Monforte – Lugo – A Coruña',        type:'conv', vmax:120, path:['MON','LUG','COU']},
+  {name:'Ourense – Vigo',                    type:'conv', vmax:120, path:['OUR','VGO']},
+];
+
+// Productos Renfe (codProduct del visor de tiempo real)
+const PRODUCTS = {
+  2:{n:'AVE',cat:'av'}, 25:{n:'AVE TGV',cat:'av'}, 28:{n:'AVLO',cat:'av'},
+  4:{n:'Talgo',cat:'ld'}, 5:{n:'Altaria',cat:'ld'}, 7:{n:'Diurno',cat:'ld'}, 8:{n:'Estrella',cat:'ld'}, 9:{n:'Trenhotel',cat:'ld'},
+  10:{n:'Euromed',cat:'ld'}, 11:{n:'Alvia',cat:'ld'}, 13:{n:'Intercity',cat:'ld'}, 24:{n:'AV City',cat:'ld'},
+  3:{n:'Avant',cat:'md'}, 14:{n:'Andalucía Exp.',cat:'md'}, 15:{n:'Catalunya Exp.',cat:'md'}, 16:{n:'MD',cat:'md'},
+  18:{n:'Regional',cat:'md'}, 19:{n:'Regional Exp.',cat:'md'}, 20:{n:'TRD',cat:'md'}, 21:{n:'Cercanías',cat:'md'},
+  22:{n:'Histórico',cat:'md'}, 23:{n:'Turístico',cat:'md'}, 27:{n:'Euskotren',cat:'md'}, 29:{n:'Temático',cat:'md'}, 0:{n:'Servicio',cat:'md'},
+};
+const CAT_LABEL = {av:'Alta Velocidad', ld:'Larga Distancia', md:'Media Distancia', fr:'Mercancías'};
+const CAT_COLOR = {av:'#38bdf8', ld:'#f472b6', md:'#a78bfa', fr:'#e2e8f0'};
+const COLOR = {ok:'#22c55e', warn:'#facc15', cut:'#ef4444'};
+
+/* =====================================================================
+   2. UTILIDADES
+   ===================================================================== */
+const RAD = Math.PI / 180;
+const $ = id => document.getElementById(id);
+const rnd  = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const nf = new Intl.NumberFormat('es-ES');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm = c => String(c ?? '').trim().replace(/^0+(?=\d)/, '');
+const num = v => { const n = typeof v === 'number' ? v : parseFloat(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : null; };
+function hav(a, b) {
+  const dLa = (b[0]-a[0])*RAD, dLo = (b[1]-a[1])*RAD;
+  const s = Math.sin(dLa/2)**2 + Math.cos(a[0]*RAD)*Math.cos(b[0]*RAD)*Math.sin(dLo/2)**2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(s));
+}
+function mulberry32(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function decodePolyline(s) {
+  let i = 0, la = 0, lo = 0; const out = [];
+  while (i < s.length) {
+    for (let w = 0; w < 2; w++) {
+      let r = 0, sh = 0, b;
+      do { b = s.charCodeAt(i++) - 63; r |= (b & 31) << sh; sh += 5; } while (b >= 32);
+      const d = r & 1 ? ~(r >> 1) : r >> 1;
+      if (w === 0) la += d; else lo += d;
+    }
+    out.push([la / 1e5, lo / 1e5]);
+  }
+  return out;
+}
+const fmtHMS = ms => new Date(ms).toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+const fmtHM  = ms => new Date(ms).toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+function fmtCountdown(ms) {
+  const m = Math.round(ms / 60000);
+  if (m <= 0) return {v:'Ahora', u:'', now:true};
+  if (m < 60) return {v:String(m), u:'min'};
+  return {v:`${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`, u:''};
+}
+// Convierte los formatos de hora de Renfe (HH:MM, ISO, epoch) en milisegundos, eligiendo el día más próximo
+function parseTime(v, ref = Date.now()) {
+  if (v === null || v === undefined || v === '') return null;
+  if (typeof v === 'number') return v > 1e12 ? v : v > 1e9 ? v * 1000 : null;
+  const s = String(v).trim();
+  let m = s.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (m) {
+    const d = new Date(ref); d.setHours(+m[1], +m[2], +(m[3] || 0), 0);
+    let t = d.getTime();
+    if (t - ref > 12 * 3600e3) t -= 864e5; else if (ref - t > 12 * 3600e3) t += 864e5;
+    return t;
+  }
+  m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (m) return new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +(m[6] || 0)).getTime();
+  if (/^\d{10,13}$/.test(s)) return parseTime(+s, ref);
+  const t = Date.parse(s.replace(' ', 'T'));
+  return Number.isFinite(t) ? t : null;
+}
+function delayClass(d) { return d >= 30 ? 'crit' : d >= 15 ? 'late' : d >= 5 ? 'warn' : 'ok'; }
+const delayText = d => d > 0 ? `+${d}′` : 'En hora';
+
+/* =====================================================================
+   3. CATÁLOGO DE ESTACIONES Y RED
+   ===================================================================== */
+const CAT = new Map();                                    // código normalizado -> {code, n, c}
+for (const [code, n, la, lo] of (EMBED && EMBED.cat) || []) CAT.set(norm(code), {code, n, c:[la, lo]});
+const catGrid = new Map(), CG = 0.1;
+for (const s of CAT.values()) { const k = Math.floor(s.c[0]/CG) + ':' + Math.floor(s.c[1]/CG); (catGrid.get(k) || catGrid.set(k, []).get(k)).push(s); }
+function nearestCatStation(p) {
+  let best = null, bd = Infinity; const a = Math.floor(p[0]/CG), b = Math.floor(p[1]/CG);
+  for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const s of catGrid.get((a+i)+':'+(b+j)) || []) { const d = hav(p, s.c); if (d < bd) { bd = d; best = s; } }
+  return {s:best, d:bd};
+}
+
+const STATIONS = new Map();      // id -> estación
+const CODE2ST = new Map();       // código normalizado -> estación
+for (const id in ST) {
+  const s = ST[id];
+  const st = {id, name:s.n, c:s.c, major:!!s.m, junction:!!s.j, net:true, codes:new Set(s.k.map(norm)), code:s.k[0] || null};
+  STATIONS.set(id, st);
+  for (const c of st.codes) CODE2ST.set(c, st);
+}
+const stationName = code => { const c = norm(code); return CODE2ST.get(c)?.name || CAT.get(c)?.n || (c ? `Estación ${c}` : '—'); };
+
+function buildGeom(A, B, seed) {
+  const r = mulberry32(seed), k = Math.cos((A[0]+B[0])/2 * RAD);
+  const x1 = A[1]*k, y1 = A[0], dx = B[1]*k - x1, dy = B[0] - y1, L = Math.hypot(dx, dy), nx = -dy/L, ny = dx/L;
+  const bow = (r()*2-1) * 0.08 * L, n = Math.max(10, Math.round(L * 18)), pts = [];
+  for (let i = 0; i <= n; i++) { const t = i/n, off = bow*4*t*(1-t); pts.push([y1 + dy*t + ny*off, (x1 + dx*t + nx*off) / k]); }
+  return pts;
+}
+const EDGES = [], ADJ = {};
+for (const k in ST) ADJ[k] = [];
+for (const L of LINES) for (let i = 0; i < L.path.length - 1; i++) {
+  const a = L.path[i], b = L.path[i+1], id = a + '-' + b;
+  const enc = EMBED && EMBED.edges && EMBED.edges[id];
+  const geom = enc ? decodePolyline(enc) : buildGeom(ST[a].c, ST[b].c, hash(id));
+  const cum = [0];
+  for (let j = 1; j < geom.length; j++) cum.push(cum[j-1] + hav(geom[j-1], geom[j]));
+  let s = 90, w = 180, n = -90, e = -180;
+  for (const p of geom) { s = Math.min(s, p[0]); n = Math.max(n, p[0]); w = Math.min(w, p[1]); e = Math.max(e, p[1]); }
+  const edge = {id, a, b, name:`${ST[a].n} – ${ST[b].n}`, line:L.name, type:L.type, vmax:L.vmax, geom, cum, len:cum[cum.length-1],
+                bbox:[s - .08, w - .1, n + .08, e + .1], real:!!enc, status:'ok', cause:null, since:0, until:0, liveTrains:[]};
+  EDGES.push(edge); ADJ[a].push({e:edge, to:b, dir:1}); ADJ[b].push({e:edge, to:a, dir:-1});
+}
+const TOTAL_KM = EDGES.reduce((s, e) => s + e.len, 0) / 1000;
+
+function pointAt(e, s, dir = 1) {
+  if (dir < 0) s = e.len - s;
+  s = clamp(s, 0, e.len);
+  const c = e.cum; let lo = 0, hi = c.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (c[m] <= s) lo = m; else hi = m; }
+  const f = (s - c[lo]) / ((c[hi] - c[lo]) || 1), p = e.geom[lo], q = e.geom[hi];
+  return [p[0] + (q[0]-p[0])*f, p[1] + (q[1]-p[1])*f];
+}
+// Proyecta un punto GPS sobre la vía dibujada más cercana
+function snapToNetwork(p) {
+  let best = null;
+  const k = Math.cos(p[0] * RAD);
+  for (const e of EDGES) {
+    const b = e.bbox;
+    if (p[0] < b[0] || p[0] > b[2] || p[1] < b[1] || p[1] > b[3]) continue;
+    const g = e.geom;
+    for (let i = 0; i < g.length - 1; i++) {
+      const ax = g[i][1]*k, ay = g[i][0], bx = g[i+1][1]*k, by = g[i+1][0], px = p[1]*k, py = p[0];
+      const dx = bx - ax, dy = by - ay, L2 = dx*dx + dy*dy;
+      const t = L2 ? clamp(((px-ax)*dx + (py-ay)*dy) / L2, 0, 1) : 0;
+      const qx = ax + t*dx, qy = ay + t*dy, d = Math.hypot(px - qx, py - qy) * 111195;
+      if (!best || d < best.d) best = {e, d, s:e.cum[i] + t*(e.cum[i+1] - e.cum[i]), pt:[qy, qx / k]};
+    }
+  }
+  return best;
+}
+
+/* =====================================================================
+   4. MAPA
+   ===================================================================== */
+const map = L.map('map', {zoomControl:false, minZoom:5, maxZoom:13, zoomSnap:0.5, maxBounds:[[33,-14],[47,8]], maxBoundsViscosity:0.8});
+map.fitBounds([[36.0,-9.3],[43.8,3.3]], {padding:[10,10]});
+L.control.zoom({position:'topright'}).addTo(map);
+map.createPane('base').style.zIndex = 150;
+map.createPane('tracks').style.zIndex = 410;
+map.createPane('route').style.zIndex = 420;
+map.createPane('stations').style.zIndex = 450;
+map.createPane('trains').style.zIndex = 620;
+// Los paneles propios no capturan el ratón: sólo lo hacen sus elementos interactivos
+// (si no, la capa superior tapa los clics de estaciones y vías).
+for (const p of ['base','tracks','route','stations','trains']) map.getPane(p).style.pointerEvents = 'none';
+
+// Mapa base integrado (siempre visible; las teselas se superponen si cargan)
+if (EMBED) {
+  const landStyle = c => ({pane:'base', interactive:false, stroke:true, weight:1, color:c === 'ESP' ? '#2a3a52' : '#1c2737',
+                           fillColor:c === 'ESP' ? '#111a27' : '#0c121c', fillOpacity:1});
+  for (const l of EMBED.land) L.polygon(decodePolyline(l.p), landStyle(l.c)).addTo(map);
+  L.polyline(EMBED.prov.map(decodePolyline), {pane:'base', interactive:false, color:'#1d2838', weight:0.8}).addTo(map);
+}
+// Teselas con respaldo: CARTO -> Esri -> sólo mapa integrado
+// Proveedores sin clave de API. Si ninguno carga, queda el mapa integrado.
+const CARTO_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
+const TILES = [
+  {name:'CARTO Dark', url:'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', o:{subdomains:'abcd', maxZoom:19}, attr:CARTO_ATTR},
+  {name:'CARTO Dark (alt.)', url:'https://{s}.basemaps.cartocdn.com/rastertiles/dark_nolabels/{z}/{x}/{y}{r}.png', o:{subdomains:'abcd', maxZoom:19}, attr:CARTO_ATTR},
+];
+let tileIdx = -1, tileLayer = null, baseStatus = 'integrado';
+function startTiles() {
+  if (tileLayer) { map.removeLayer(tileLayer); tileLayer = null; }
+  tileIdx = -1;
+  if (settings.base === 'embedded') { baseStatus = 'integrado'; setTimeout(renderDiag, 0); return; }
+  nextTiles();
+}
+function nextTiles() {
+  if (tileLayer) { map.removeLayer(tileLayer); tileLayer = null; }
+  tileIdx++;
+  if (tileIdx >= TILES.length) { baseStatus = 'integrado (no cargan las teselas)'; renderDiag(); return; }
+  const T = TILES[tileIdx]; let ok = 0, bad = 0;
+  tileLayer = L.tileLayer(T.url, {...T.o, attribution:T.attr + ' · Natural Earth'});
+  tileLayer.on('tileload', () => { ok++; if (ok === 1) { baseStatus = T.name; renderDiag(); } });
+  tileLayer.on('tileerror', () => { bad++; if (!ok && bad >= 4) nextTiles(); });
+  tileLayer.addTo(map);
+}
+startTiles();
+
+// Vías
+const drawOrder = [...EDGES].sort((a, b) => (a.type === 'av') - (b.type === 'av'));
+for (const e of drawOrder) {
+  const av = e.type === 'av', w = av ? 3.2 : 2.2;
+  e.casing = L.polyline(e.geom, {pane:'tracks', color:'#04070c', weight:w + 3, opacity:.9, interactive:false}).addTo(map);
+  e.glow   = L.polyline(e.geom, {pane:'tracks', color:COLOR.ok, weight:av ? 11 : 9, opacity:.1, className:'trk-glow'}).addTo(map);
+  e.core   = L.polyline(e.geom, {pane:'tracks', color:COLOR.ok, weight:w, opacity:.85, interactive:false, className:'trk-core', lineCap:'round'}).addTo(map);
+  e.glow.bindPopup(() => edgeHTML(e), {className:'dark-popup', minWidth:260, maxWidth:260});
+}
+
+// Estaciones (clic -> panel de llegadas y salidas)
+function addStationMarker(st) {
+  const r = st.major ? 5 : st.net ? 3.6 : 2.6;
+  st.marker = L.circleMarker(st.c, {pane:'stations', radius:r, color:st.major ? '#e2e8f0' : st.net ? '#94a3b8' : '#64748b', weight:1.5,
+                                    fillColor:'#0a0f18', fillOpacity:1, className:'stn', bubblingMouseEvents:false})
+    .bindTooltip(esc(st.name), {permanent:true, direction:'right', offset:[5, 0], className:'st-label ' + (st.major ? 'st-major' : st.net ? 'st-minor' : 'st-extra')})
+    .on('click', () => openStation(st))
+    .addTo(map);
+}
+for (const st of STATIONS.values()) if (!st.junction) addStationMarker(st);
+function ensureLiveStation(code) {
+  const c = norm(code);
+  if (!c || CODE2ST.has(c)) return;
+  const cs = CAT.get(c); if (!cs) return;
+  const st = {id:'R' + c, name:cs.n, c:cs.c, major:false, net:false, codes:new Set([c]), code:cs.code};
+  STATIONS.set(st.id, st); CODE2ST.set(c, st); addStationMarker(st);
+}
+const mapEl = $('map');
+function syncZoom() {
+  const z = map.getZoom();
+  mapEl.classList.toggle('z7', z >= 7); mapEl.classList.toggle('z9', z >= 9);
+  const r = z >= 10 ? 7 : z >= 8 ? 6 : 5;
+  for (const t of trains.values()) { t.baseR = r; styleTrain(t, true); }
+}
+map.on('zoomend', syncZoom);
+
+// Leyenda y aviso
+const legend = L.control({position:'bottomleft'});
+legend.onAdd = () => { const d = L.DomUtil.create('div', 'legend'); d.id = 'legend'; L.DomEvent.disableClickPropagation(d); return d; };
+legend.addTo(map);
+function renderLegend() {
+  const live = state.mode === 'live';
+  $('legend').innerHTML = `
+    <div class="lt">Estado de vía${live ? ' · inferido' : ''}</div>
+    <div class="r"><i class="ln" style="background:var(--ok)"></i>Circulación normal</div>
+    <div class="r"><i class="ln" style="background:var(--warn)"></i>${live ? 'Retrasos en el tramo' : 'Precaución · velocidad reducida'}</div>
+    <div class="r"><i class="ln dash"></i>${live ? 'Tren detenido en plena vía' : 'Tramo cortado'}</div>
+    <div class="s"></div>
+    <div class="lt">Trenes</div>
+    <div class="r"><i class="pt" style="background:var(--av)"></i>Alta Velocidad</div>
+    <div class="r"><i class="pt" style="background:var(--ld)"></i>Larga Distancia</div>
+    <div class="r"><i class="pt" style="background:var(--md)"></i>Media Distancia</div>
+    ${live ? '' : '<div class="r"><i class="pt" style="background:var(--fr)"></i>Mercancías</div>'}
+    <div class="r"><i class="pt" style="background:#0a0f18;box-shadow:0 0 0 2px var(--late)"></i>Retraso ≥ 10 min</div>
+    <div class="note">${live ? 'Posiciones: Renfe en tiempo real' : 'Simulación con datos ficticios'}</div>`;
+}
+const banner = L.control({position:'topleft'});
+banner.onAdd = () => { const d = L.DomUtil.create('div', 'banner'); d.id = 'banner'; return d; };
+banner.addTo(map);
+function setBanner(html) { const b = $('banner'); b.innerHTML = html || ''; b.classList.toggle('on', !!html); }
+
+/* =====================================================================
+   5. ESTADO GLOBAL Y TRENES (comunes a tiempo real y simulación)
+   ===================================================================== */
+const state = {mode:'wait', speed:1, simTime:Date.now(), selected:null, station:null, tab:'resumen'};
+const trains = new Map();               // id -> tren
+const groups = {av:L.layerGroup().addTo(map), ld:L.layerGroup().addTo(map), md:L.layerGroup().addTo(map), fr:L.layerGroup().addTo(map)};
+let routeLayer = null;
+const nowMs = () => state.mode === 'sim' ? state.simTime : Date.now();
+
+function createMarker(t) {
+  t.baseR = map.getZoom() >= 8 ? 6 : 5;
+  t.marker = L.circleMarker(t.pos, {pane:'trains', radius:t.baseR, fillColor:CAT_COLOR[t.cat], fillOpacity:1, color:'#05080d', weight:1.6, bubblingMouseEvents:false});
+  t.marker.bindTooltip(() => `<b>${esc(t.label)} ${esc(t.number)}</b> · ${delayText(t.delay)}`, {className:'ttip', direction:'top', offset:[0, -6]});
+  t.pop = document.createElement('div'); t.pop.className = 'pp';
+  t.marker.bindPopup(t.pop, {className:'dark-popup', minWidth:280, maxWidth:280, autoPan:true});
+  t.marker.on('popupopen', () => selectTrain(t));
+  t.marker.on('popupclose', () => { if (state.selected === t) deselect(); });
+  groups[t.cat].addLayer(t.marker);
+}
+function styleTrain(t, force) {
+  const sel = state.selected === t;
+  const stroke = t.held ? '#ef4444' : t.delay >= 10 ? '#fb923c' : '#05080d';
+  const key = stroke + sel + t.baseR;
+  if (!force && key === t.styleKey) return;
+  t.styleKey = key;
+  t.marker.setStyle({color:sel ? '#ffffff' : stroke, weight:sel ? 2.6 : (stroke === '#05080d' ? 1.6 : 2.4), radius:sel ? t.baseR + 3 : t.baseR});
+  t.marker.setRadius(sel ? t.baseR + 3 : t.baseR);
+}
+function removeTrain(t) {
+  if (state.selected === t) t.marker.closePopup();
+  groups[t.cat].removeLayer(t.marker);
+  trains.delete(t.id);
+}
+function clearTrains() { for (const t of [...trains.values()]) removeTrain(t); }
+
+function selectTrain(t) {
+  if (state.selected && state.selected !== t) deselect();
+  state.selected = t;
+  t.pop.innerHTML = popupHTML(t);
+  t.marker.getPopup().update();
+  setTimeout(() => { const p = t.marker.getPopup(); if (p) p.options.autoPan = false; }, 400);
+  const path = state.mode === 'live' ? liveRoutePath(t) : simRoutePath(t);
+  if (path && path.length > 1) {
+    routeLayer = L.layerGroup([
+      L.polyline(path, {pane:'route', color:'#ffffff', weight:2.2, opacity:.8, dashArray:'1 6', lineCap:'round', interactive:false}),
+      L.circleMarker(path[0], {pane:'route', radius:7, color:'#fff', weight:1.5, fill:false, opacity:.8, interactive:false}),
+      L.circleMarker(path[path.length - 1], {pane:'route', radius:7, color:'#fff', weight:2.5, fill:false, interactive:false}),
+    ]).addTo(map);
+  }
+  styleTrain(t, true);
+}
+function deselect() {
+  const t = state.selected; state.selected = null;
+  if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+  if (t) { const p = t.marker.getPopup(); if (p) p.options.autoPan = true; styleTrain(t, true); }
+}
+function focusTrain(t) {
+  if (!t || !trains.has(t.id)) { addLog('info', 'Ese tren ya no está en circulación', ''); return; }
+  const cb = document.querySelector(`input[data-cat="${t.cat}"]`);
+  if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
+  map.flyTo(t.pos, Math.max(map.getZoom(), 9), {duration:.8});
+  map.once('moveend', () => { if (trains.has(t.id)) t.marker.openPopup(); });
+}
+
+function popupHTML(t) {
+  const v = state.mode === 'live' ? liveView(t) : simView(t);
+  const dc = 'c-' + delayClass(v.delay);
+  return `
+    <div class="pp-head"><span class="pp-badge" style="--c:${CAT_COLOR[t.cat]}">${esc(t.label)}</span><span class="pp-num">Nº ${esc(t.number)}</span></div>
+    <div class="pp-od"><div><small>Origen</small><b>${esc(v.from)}</b></div><span class="pp-arrow">→</span><div class="r"><small>Destino</small><b>${esc(v.to)}</b></div></div>
+    <div class="pp-prog"><i style="width:${clamp(v.pct, 0, 100).toFixed(1)}%"></i></div>
+    <div class="pp-grid">
+      <div><small>Velocidad actual</small><b class="big">${v.speed === null ? '–' : (v.approx ? '≈' : '') + v.speed}<em>km/h</em></b></div>
+      <div><small>Retraso estimado</small><b class="big ${dc}">${v.delay > 0 ? '+' + v.delay : '0'}<em>min</em></b></div>
+      <div><small>Próxima estación</small><b>${esc(v.next || '—')}</b></div>
+      <div><small>Llegada prevista</small><b class="mono">${v.nextTime ? fmtHM(v.nextTime) : '—'}</b></div>
+    </div>
+    <div class="pp-status s-${v.code}"><span></span>${esc(v.status)}</div>
+    ${v.stops && v.stops.length ? `<div class="pp-stops">${v.stops.map(s => `<div><b>${esc(s.name)}</b><span>${fmtHM(s.est)}${s.delay > 0 ? ` <span class="c-${delayClass(s.delay)}">+${s.delay}</span>` : ''}</span></div>`).join('')}</div>` : ''}
+    <div class="pp-foot">${esc(CAT_LABEL[t.cat])}${v.foot ? ' · ' + esc(v.foot) : ''}</div>`;
+}
+
+function edgeHTML(e) {
+  const label = {ok:'Normal', warn:state.mode === 'live' ? 'Retrasos' : 'Precaución', cut:state.mode === 'live' ? 'Detención' : 'Cortado'}[e.status];
+  const n = state.mode === 'live' ? e.liveTrains.length : [...trains.values()].filter(t => t.route && t.route.segs[t.seg].e === e).length;
+  const inc = state.mode === 'sim' && e.status !== 'ok' ? `
+      <div><small>Desde</small><b class="mono">${fmtHM(e.since)}</b></div>
+      <div><small>Restablecimiento</small><b class="mono">~${fmtHM(e.until)}</b></div>` : '';
+  const st = e.status === 'ok' ? {c:'run', t:'Circulación normal'} : {c:e.status === 'cut' ? 'held' : 'warn', t:e.cause};
+  return `<div class="pp">
+    <div class="pp-head"><span class="pp-badge" style="--c:${COLOR[e.status]}">${label}</span><span class="pp-title">${esc(e.name)}</span></div>
+    <div class="pp-grid">
+      <div><small>Longitud</small><b class="mono">${nf.format(Math.round(e.len / 1000))}<em>km</em></b></div>
+      <div><small>V. máx. línea</small><b class="mono">${e.vmax}<em>km/h</em></b></div>
+      <div><small>Tipo</small><b>${e.type === 'av' ? 'Alta velocidad' : 'Convencional'}</b></div>
+      <div><small>Trenes en tramo</small><b class="mono">${n}</b></div>${inc}
+    </div>
+    <div class="pp-status s-${st.c}"><span></span>${esc(st.t)}</div>
+    <div class="pp-foot">${esc(e.line)}${state.mode === 'live' ? ' · estado inferido de los trenes en circulación' : ''}</div></div>`;
+}
+
+/* =====================================================================
+   6. TIEMPO REAL — Renfe (flotaLD.json + trenesConEstacionesLD.json)
+   ===================================================================== */
+const live = {ok:false, everOk:false, failures:0, feedTime:null, lastOk:0, via:null, lastErr:'', routes:new Map(), routesAt:0, routesLoading:false, timer:null, polls:0};
+
+function accessRoutes() {
+  const r = [];
+  if (settings.proxy.trim()) {
+    const base = settings.proxy.trim();
+    r.push({name:'proxy propio', build:u => base.includes('{url}') ? base.replace('{url}', encodeURIComponent(u)) : base + (/[=\/]$/.test(base) ? '' : (base.includes('?') ? '&url=' : '?url=')) + encodeURIComponent(u)});
+  }
+  r.push({name:'directo', build:u => u});
+  if (settings.pub) r.push(...CFG.PUBLIC_PROXIES);
+  // Copia publicada junto a la web por GitHub Actions (mismo origen, sin CORS; refresco ~5-10 min)
+  if (/^https?:$/.test(location.protocol)) r.push({name:'copia GitHub', snapshot:true, build:u => 'data/' + u.split('/').pop() + '?t=' + Date.now()});
+  if (live.via) { const i = r.findIndex(x => x.name === live.via); if (i > 0) r.unshift(r.splice(i, 1)[0]); }
+  return r;
+}
+async function fetchJSON(url) {
+  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), CFG.TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {cache:'no-store', credentials:'omit', signal:ctl.signal});
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const txt = await res.text();
+    return JSON.parse(txt);
+  } finally { clearTimeout(to); }
+}
+async function fetchRenfe(url) {
+  const errs = [];
+  for (const r of accessRoutes()) {
+    try { const j = await fetchJSON(r.build(url)); live.via = r.name; live.snapshot = !!r.snapshot; return j; }
+    catch (e) { errs.push(`${r.name}: ${e.name === 'AbortError' ? 'tiempo agotado' : (e.message === 'Failed to fetch' ? 'bloqueado (CORS/red)' : e.message)}`); }
+  }
+  throw new Error(errs.join(' · '));
+}
+const listOf = d => Array.isArray(d) ? d : (d && (d.trenes || d.trains || d.data)) || [];
+
+async function pollLive() {
+  clearTimeout(live.timer);
+  if (settings.mode === 'sim') return;
+  try {
+    const data = await fetchRenfe(CFG.FLOTA);
+    const list = listOf(data);
+    if (!list.length) throw new Error('respuesta sin trenes');
+    if (state.mode !== 'live') enterLive();
+    live.ok = live.everOk = true; live.failures = 0; live.lastOk = Date.now(); live.lastErr = '';
+    live.feedTime = parseTime(data.fechaActualizacion);
+    const age = live.feedTime ? Math.round((Date.now() - live.feedTime) / 60000) : null;
+    setConn('live', live.snapshot ? `Casi en directo${age !== null && age > 1 ? ' · ' + age + ' min' : ''}` : 'En directo');
+    ingestFleet(list);
+    if (!live.routesLoading && (Date.now() - live.routesAt > CFG.ROUTES_MS || [...trains.values()].some(t => !live.routes.has(t.id)) && Date.now() - live.routesAt > 60000)) loadRoutes();
+  } catch (e) {
+    live.ok = false; live.failures++; live.lastErr = e.message;
+    if (state.mode === 'live' && live.failures < 3) setConn('err', 'Reintentando');
+    else if (settings.mode === 'auto' && state.mode !== 'sim') enterSim('No se pudo conectar con Renfe');
+    else if (settings.mode === 'live' && state.mode !== 'offline') enterOffline();
+  }
+  renderDiag();
+  live.timer = setTimeout(pollLive, state.mode === 'live' ? CFG.POLL_MS : CFG.RETRY_MS);
+}
+
+async function loadRoutes() {
+  live.routesLoading = true;
+  try {
+    const data = await fetchRenfe(CFG.RUTAS);
+    const m = new Map();
+    for (const r of listOf(data)) {
+      const id = String(r.idTren ?? r.codComercial ?? r.id ?? '').trim(); if (!id) continue;
+      const stops = (r.estaciones || r.paradas || []).map(s => ({code:norm(s.p ?? s.codEstacion ?? s.cod ?? s.c), time:s.h ?? s.hora ?? s.hs ?? s.hl ?? null})).filter(s => s.code);
+      const path = (r.secuencia || []).map(p => [num(p.lat ?? p.latitud), num(p.lon ?? p.longitud)]).filter(p => p[0] !== null && p[1] !== null && Math.abs(p[0]) <= 90);
+      m.set(id, {stops, path});
+      for (const s of stops) ensureLiveStation(s.code);
+    }
+    if (m.size) { live.routes = m; live.routesAt = Date.now(); }
+  } catch (e) { live.lastErr = 'Recorridos: ' + e.message; live.routesAt = Date.now() - CFG.ROUTES_MS + 60000; }
+  live.routesLoading = false;
+  if (state.station) renderStation();
+  renderDiag();
+}
+
+function ingestFleet(list) {
+  const now = Date.now(), seen = new Set(), first = live.polls++ === 0;
+  for (const raw of list) {
+    const lat = num(raw.latitud ?? raw.lat ?? raw.GpsLat), lon = num(raw.longitud ?? raw.lon ?? raw.GpsLon);
+    if (lat === null || lon === null || lat < 27 || lat > 45 || lon < -19 || lon > 5) continue;
+    const id = String(raw.codComercial ?? raw.idTren ?? raw.id ?? '').trim(); if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const prod = PRODUCTS[num(raw.codProduct)] || {n:raw.desProduct || 'Tren', cat:'md'};
+    const gps = [lat, lon];
+    let t = trains.get(id);
+    const prevDelay = t ? t.delay : null;
+    if (!t) {
+      t = {id, number:id, src:'live', cat:prod.cat, label:prod.n, pos:gps, samples:[], speed:null, stillSince:now, stillPos:gps, delay:0, held:false};
+      trains.set(id, t);
+      t.snap = snapToNetwork(gps);
+      t.pos = t.snap && t.snap.d < 6000 ? t.snap.pt : gps;
+      createMarker(t);
+    }
+    if (prod.cat !== t.cat) { groups[t.cat].removeLayer(t.marker); t.cat = prod.cat; groups[t.cat].addLayer(t.marker); }
+    t.label = prod.n; t.missed = 0;
+    t.delay = Math.max(0, Math.round(num(raw.ultRetraso) ?? 0));
+    t.origin = norm(raw.codOrigen); t.dest = norm(raw.codDestino);
+    t.prev = norm(raw.codEstAnt); t.next = norm(raw.codEstSig);
+    t.nextTime = parseTime(raw.horaLlegadaSigEst ?? raw.horaLlegadaSig);
+    t.mat = raw.mat || ''; t.corridor = raw.desCorridor || '';
+    [t.origin, t.dest, t.prev, t.next].forEach(ensureLiveStation);
+    // Velocidad estimada a partir de posiciones GPS sucesivas
+    const last = t.samples[t.samples.length - 1];
+    if (!last || hav(last.p, gps) > 30) {
+      t.samples.push({p:gps, t:now});
+      if (t.samples.length > 6) t.samples.shift();
+      if (t.samples.length >= 2) {
+        const a = t.samples[t.samples.length - 2], b = t.samples[t.samples.length - 1];
+        const dt = (b.t - a.t) / 1000;
+        if (dt > 5) t.speed = Math.round(clamp(hav(a.p, b.p) / dt * 3.6, 0, 330));
+      }
+    } else if (now - last.t > 90000) t.speed = 0;
+    if (hav(t.stillPos, gps) > 150) { t.stillPos = gps; t.stillSince = now; }
+    t.stillFor = now - t.stillSince;
+    t.nearStation = nearestCatStation(gps).d < 1500;
+    // Animación hasta la nueva posición, sobre la vía cuando es posible
+    const snap = snapToNetwork(gps);
+    const target = snap && snap.d < 6000 ? snap.pt : gps;
+    const from = t.marker.getLatLng();
+    const jump = hav([from.lat, from.lng], target);
+    if (first || jump > 40000) { t.pos = target; t.anim = null; t.marker.setLatLng(target); }
+    else if (jump > 5) {
+      const along = t.snap && snap && t.snap.e === snap.e && snap.d < 6000 && t.snap.d < 6000;
+      t.anim = {t0:now, t1:now + CFG.POLL_MS * 0.95, from:[from.lat, from.lng], to:target, e:along ? snap.e : null, s0:along ? t.snap.s : 0, s1:along ? snap.s : 0};
+    }
+    t.snap = snap;
+    t.held = !!(t.stillFor > 6 * 60000 && t.delay >= 15 && !t.nearStation);
+    styleTrain(t);
+    if (!first && prevDelay !== null) {
+      if (prevDelay < 15 && t.delay >= 15) addLog(t.delay >= 30 ? 'crit' : 'late', `${t.label} ${t.number} · +${t.delay} min`, `${stationName(t.origin)} → ${stationName(t.dest)} · retraso superior a ${t.delay >= 30 ? 30 : 15} min`, {train:t});
+      else if (prevDelay < 30 && t.delay >= 30) addLog('crit', `${t.label} ${t.number} · +${t.delay} min`, `${stationName(t.origin)} → ${stationName(t.dest)} · retraso superior a 30 min`, {train:t});
+    }
+  }
+  for (const t of [...trains.values()]) if (!seen.has(t.id) && ++t.missed >= 2) removeTrain(t);
+  inferNetworkState(first);
+  if (first) addLog('info', 'Conectado a Renfe en tiempo real', `${trains.size} trenes de AV, Larga y Media Distancia en circulación`);
+}
+
+// Estado de cada tramo deducido de los trenes reales que lo recorren
+function inferNetworkState(first) {
+  for (const e of EDGES) e.liveTrains = [];
+  for (const t of trains.values()) if (t.snap && t.snap.d < 6000) t.snap.e.liveTrains.push(t);
+  for (const e of EDGES) {
+    const ts = e.liveTrains;
+    let status = 'ok', cause = null;
+    const stopped = ts.filter(t => t.held);
+    const avg = ts.length ? ts.reduce((s, t) => s + t.delay, 0) / ts.length : 0;
+    const max = ts.reduce((m, t) => Math.max(m, t.delay), 0);
+    if (stopped.length) {
+      const t = stopped[0];
+      status = 'cut'; cause = `${t.label} ${t.number} detenido ${Math.round(t.stillFor / 60000)} min fuera de estación (+${t.delay} min)`;
+    } else if (ts.length && (max >= 20 || avg >= 10)) {
+      status = 'warn'; cause = `Retraso medio +${Math.round(avg)} min en ${ts.length} ${ts.length === 1 ? 'tren' : 'trenes'} (máx. +${max})`;
+    }
+    if (status !== e.status) {
+      const prev = e.status;
+      setEdge(e, status, cause, 0);
+      if (!first) {
+        if (status === 'cut') addLog('crit', `Tren detenido · ${e.name}`, cause, {edge:e});
+        else if (status === 'warn' && prev === 'ok') addLog('warn', `Retrasos · ${e.name}`, cause, {edge:e});
+        else if (status === 'ok') addLog('ok', `Circulación normalizada · ${e.name}`, 'Sin retrasos significativos en el tramo', {edge:e});
+      }
+    } else e.cause = cause;
+  }
+}
+
+function liveRoutePath(t) {
+  const r = live.routes.get(t.id);
+  if (r && r.path.length > 1) return r.path;
+  if (r && r.stops.length > 1) return r.stops.map(s => CODE2ST.get(s.code)?.c || CAT.get(s.code)?.c).filter(Boolean);
+  return null;
+}
+function liveView(t) {
+  const r = live.routes.get(t.id), now = Date.now();
+  let pct = 50, stops = [];
+  if (r && r.stops.length) {
+    const j = r.stops.findIndex(s => s.code === t.next);
+    if (j >= 0) {
+      pct = (j - 0.5) / Math.max(1, r.stops.length - 1) * 100;
+      stops = r.stops.slice(j, j + 4).map(s => { const sch = parseTime(s.time, now); return sch ? {name:stationName(s.code), est:sch + t.delay * 60000, delay:t.delay} : null; }).filter(Boolean);
+    }
+  }
+  const nextTime = (stops[0] && stops[0].est) || t.nextTime || null;
+  let code = 'run', status = 'En circulación';
+  if (t.held) { code = 'held'; status = `Detenido ${Math.round(t.stillFor / 60000)} min fuera de estación`; }
+  else if (t.speed === 0 && t.nearStation) { code = 'dwell'; status = 'Detenido en estación'; }
+  else if (t.delay >= 15) { code = 'warn'; status = `Circula con ${t.delay} min de retraso`; }
+  return {from:stationName(t.origin), to:stationName(t.dest), pct, speed:t.speed, approx:true, delay:t.delay,
+          next:stationName(t.next), nextTime, code, status, stops,
+          foot:[t.mat && 'Material ' + t.mat, t.corridor, live.feedTime ? 'Renfe ' + fmtHMS(live.feedTime) : null].filter(Boolean).join(' · ')};
+}
+
+/* =====================================================================
+   7. SIMULACIÓN (respaldo si no hay conexión con Renfe)
+   ===================================================================== */
+const SIM = {
+  av:{vmax:300, acc:.42, dec:.60, fleet:26, dwell:120, stopAt:c => !!ST[c].m, cost:e => e.len * (e.type === 'av' ? 1 : 3)},
+  md:{vmax:160, acc:.50, dec:.70, fleet:22, dwell:80,  stopAt:c => !ST[c].j,  cost:e => e.len * (e.type === 'conv' ? 1 : 1.3)},
+  fr:{vmax:100, acc:.16, dec:.35, fleet:14, dwell:0,   stopAt:() => false,    cost:e => e.len * (e.type === 'conv' ? 1 : 4)},
+};
+const SIM_ENDS = {
+  av:['MAD','BCN','SEV','MAL','VLC','ALC','MUR','GRA','COU','VGO','LEO','OVI','BUR','FIG','ZAR','HUE','TOL','VAL','CAD','BIL','SSB','PAM','LOG','SAL','BAD','CAS','GIJ','SAN','OUR'],
+  md:Object.keys(ST).filter(k => !ST[k].j),
+  fr:['ALG','VLC','BCN','BIL','GIJ','VGO','HUL','TAR','CAR','IRU','FIG','MAD','ZAR','SEV','LEO','COU','SAN','BAD','PAM','MUR','VIT','CAS','SAL'],
+};
+const SIM_LEN = {av:[150e3, 1300e3], md:[60e3, 420e3], fr:[180e3, 1100e3]};
+const CARGO = ['Contenedores','Automóviles','Productos siderúrgicos','Graneles agrícolas','Productos químicos','Autopista ferroviaria'];
+const CAUSE_WARN = ['Limitación temporal de velocidad','Incidencia en señalización','Obras de mantenimiento','Viento fuerte','Fallo en circuito de vía','Niebla densa','Trabajos en catenaria'];
+const CAUSE_CUT  = ['Avería en catenaria','Fallo en enclavamiento','Desprendimiento en trinchera','Incendio próximo a la vía','Inundación de plataforma','Invasión de la vía','Rotura de carril'];
+const sim = {pending:[], incidentClock:0, used:new Set(), seq:0};
+
+function shortestPath(o, d, type) {
+  const cost = SIM[type].cost, dist = {}, prev = {}, done = new Set();
+  for (const k in ST) dist[k] = Infinity;
+  dist[o] = 0;
+  for (;;) {
+    let u = null, best = Infinity;
+    for (const k in dist) if (!done.has(k) && dist[k] < best) { best = dist[k]; u = k; }
+    if (u === null) return null;
+    if (u === d) break;
+    done.add(u);
+    for (const {e, to} of ADJ[u]) { const nd = best + cost(e) * (e.status === 'cut' ? 25 : 1); if (nd < dist[to]) { dist[to] = nd; prev[to] = u; } }
+  }
+  const path = [d]; while (path[0] !== o) path.unshift(prev[path[0]]); return path;
+}
+function makeRoute(path, type) {
+  const T = SIM[type], segs = [], cum = [0], start = [0], run = [];
+  for (let i = 0; i < path.length - 1; i++) {
+    const link = ADJ[path[i]].find(x => x.to === path[i+1]);
+    segs.push({e:link.e, dir:link.dir}); cum.push(cum[i] + link.e.len);
+    run.push(link.e.len / (Math.min(T.vmax, link.e.vmax) / 3.6 * 0.92));
+    start.push(start[i] + run[i] + (i < path.length - 2 && T.stopAt(path[i+1]) ? T.dwell : 0));
+  }
+  return {path, segs, cum, start, run, len:cum[cum.length - 1]};
+}
+function pickRoute(type) {
+  const pool = SIM_ENDS[type], [min, max] = SIM_LEN[type];
+  for (let i = 0; i < 60; i++) {
+    let o = pick(pool), d = pick(pool);
+    if (type === 'av' && Math.random() < 0.6) { o = 'MAD'; if (Math.random() < .5) [o, d] = [d, o]; }
+    if (o === d) continue;
+    const p = shortestPath(o, d, type); if (!p) continue;
+    const r = makeRoute(p, type);
+    if (r.len >= min && r.len <= max) return r;
+  }
+  return null;
+}
+function routePoint(r, D) {
+  D = clamp(D, 0, r.len); let i = 0;
+  while (i < r.segs.length - 1 && D > r.cum[i+1]) i++;
+  return pointAt(r.segs[i].e, D - r.cum[i], r.segs[i].dir);
+}
+function segLimit(t, k) {
+  const e = t.route.segs[k].e;
+  if (e.status === 'cut') return 0;
+  let v = Math.min(SIM[t.type].vmax, e.vmax);
+  if (e.status === 'warn') v = Math.max(30, v * 0.55);
+  return v / 3.6;
+}
+function schedAt(t) { const r = t.route, i = t.seg; return r.start[i] + (t.dist - r.cum[i]) / r.segs[i].e.len * r.run[i]; }
+const simDelay = t => Math.max(0, Math.round((t.delay0 + t.elapsed - schedAt(t)) / 60));
+function advancePointer(t) { const r = t.route; while (t.seg < r.segs.length - 1 && t.dist >= r.cum[t.seg + 1]) t.seg++; }
+
+function spawnSim(type, initial) {
+  const route = pickRoute(type); if (!route) return;
+  const avShare = route.segs.filter(s => s.e.type === 'av').reduce((a, s) => a + s.e.len, 0) / route.len;
+  let cat = type, label;
+  if (type === 'av') { if (avShare > 0.999) label = pick(['AVE','AVE','AVLO']); else { cat = 'ld'; label = route.path.includes('CAS') ? 'Euromed' : 'Alvia'; } }
+  else if (type === 'md') label = avShare > 0.5 ? 'Avant' : pick(['MD','MD','Regional Exp.']);
+  else label = 'Mercancías';
+  let number;
+  do { number = type === 'fr' ? String(Math.floor(rnd(40000, 99999))) : type === 'md' ? String(Math.floor(rnd(13000, 18999))) : String(Math.floor(rnd(1000, 9999))).padStart(5, '0'); } while (sim.used.has(number));
+  sim.used.add(number);
+  const roll = Math.random();
+  const t = {id:'S' + (++sim.seq), src:'sim', type, cat, label, number, route, cargo:type === 'fr' ? pick(CARGO) : null,
+             dist:0, seg:0, v:0, elapsed:0, dwell:0, done:false, alerted:false, held:false,
+             delay0:roll < .75 ? 0 : roll < .93 ? rnd(60, 480) : rnd(480, 1200)};
+  if (initial) {
+    t.dist = Math.random() * route.len * 0.9; advancePointer(t);
+    t.elapsed = schedAt(t); t.v = segLimit(t, t.seg) * 0.85;
+    t.schedDep0 = state.simTime - t.elapsed * 1000 - t.delay0 * 1000;
+  } else {
+    t.dwell = rnd(120, 600); t.elapsed = -t.dwell;
+    t.schedDep0 = state.simTime + (t.dwell - t.delay0) * 1000;
+  }
+  t.delay = simDelay(t);
+  t.pos = routePoint(route, t.dist);
+  trains.set(t.id, t);
+  createMarker(t);
+}
+function stepSim(t, h) {
+  t.elapsed += h;
+  if (t.dwell > 0) { t.dwell -= h; t.v = 0; return; }
+  const T = SIM[t.type], r = t.route, last = r.segs.length - 1;
+  let target = segLimit(t, t.seg), d = r.cum[t.seg + 1] - t.dist, stopDist = Infinity, stopK = -1;
+  for (let k = t.seg; k <= last && d < 15000; k++) {
+    const isLast = k === last, station = isLast || T.stopAt(r.path[k + 1]);
+    const bs = station ? 0 : segLimit(t, k + 1);
+    target = Math.min(target, Math.sqrt(bs * bs + 2 * T.dec * d));
+    if (bs === 0) { stopDist = d; stopK = k; break; }
+    d += r.segs[k + 1].e.len;
+  }
+  if (t.v < target) t.v = Math.min(target, t.v + T.acc * h); else t.v = Math.max(target, t.v - T.dec * 1.6 * h);
+  const move = t.v * h;
+  if (stopK >= 0 && move >= stopDist - 0.5 && (t.v > 0 || stopDist < 0.5)) {
+    t.dist = r.cum[stopK + 1]; t.v = 0;
+    if (stopK === last) { t.done = true; return; }
+    if (T.stopAt(r.path[stopK + 1])) t.dwell = rnd(0.6, 1.2) * T.dwell;
+  } else t.dist += move;
+  advancePointer(t);
+}
+function simStatus(t) {
+  const r = t.route, e = r.segs[t.seg].e;
+  if (t.dwell > 0) return {code:'dwell', text:t.dist === 0 ? `Preparado para salir de ${ST[r.path[0]].n}` : `Parada en ${ST[r.path[t.seg]].n}`};
+  if (e.status === 'cut') return t.v > .3 ? {code:'held', text:'Frenando · tramo interrumpido'}
+    : t.dist - r.cum[t.seg] < 5 ? {code:'held', text:`Retenido en ${ST[r.path[t.seg]].n} · corte de vía`} : {code:'held', text:'Detenido en plena vía · corte de vía'};
+  if (e.status === 'warn') return {code:'warn', text:'Precaución · velocidad limitada'};
+  if (t.v < .3) return {code:'dwell', text:'Detenido'};
+  return {code:'run', text:'Circulación normal'};
+}
+// Próximas paradas con hora programada y estimada (para popup y paneles de estación)
+function simUpcoming(t) {
+  const r = t.route, T = SIM[t.type], last = r.path.length - 1, sNow = schedAt(t), out = [];
+  const wait = t.dwell > 0 ? t.dwell : 0;
+  if (t.dwell > 0) out.push({k:t.seg, code:r.path[t.seg], depSched:t.schedDep0 + r.start[t.seg] * 1000, depEst:state.simTime + t.dwell * 1000});
+  for (let k = t.seg + 1; k <= last; k++) {
+    const code = r.path[k];
+    if (k < last && !T.stopAt(code)) continue;
+    const arrS = r.start[k-1] + r.run[k-1];
+    const o = {k, code, arrSched:t.schedDep0 + arrS * 1000, arrEst:state.simTime + (arrS - sNow + wait) * 1000};
+    if (k < last) { o.depSched = t.schedDep0 + r.start[k] * 1000; o.depEst = o.arrEst + (r.start[k] - arrS) * 1000; }
+    out.push(o);
+  }
+  return out;
+}
+function simRoutePath(t) {
+  const c = [];
+  for (const s of t.route.segs) { const g = s.dir > 0 ? s.e.geom : [...s.e.geom].reverse(); c.push(...(c.length ? g.slice(1) : g)); }
+  return c;
+}
+function simView(t) {
+  const r = t.route, st = simStatus(t), up = simUpcoming(t).filter(u => u.arrEst);
+  return {from:ST[r.path[0]].n, to:ST[r.path[r.path.length - 1]].n, pct:t.dist / r.len * 100, speed:Math.round(t.v * 3.6), approx:false, delay:t.delay,
+          next:up[0] ? ST[up[0].code].n : null, nextTime:up[0] ? up[0].arrEst : null, code:st.code, status:st.text,
+          stops:up.slice(0, 4).map(u => ({name:ST[u.code].n, est:u.arrEst, delay:Math.max(0, Math.round((u.arrEst - u.arrSched) / 60000))})),
+          foot:[r.segs[t.seg].e.line, t.cargo].filter(Boolean).join(' · ')};
+}
+function styleEdge(e) {
+  const c = COLOR[e.status];
+  e.core.setStyle({color:c, opacity:e.status === 'ok' ? .85 : 1});
+  e.glow.setStyle({color:c, opacity:e.status === 'ok' ? .1 : .32});
+  e.core.getElement()?.classList.toggle('trk-cut', e.status === 'cut');
+  e.glow.getElement()?.classList.toggle('glow-alert', e.status !== 'ok');
+  if (e.status !== 'ok') { e.casing.bringToFront(); e.glow.bringToFront(); e.core.bringToFront(); }
+}
+function setEdge(e, status, cause, durSec) { e.status = status; e.cause = cause; e.since = nowMs(); e.until = durSec ? nowMs() + durSec * 1000 : 0; styleEdge(e); }
+function resetEdges() { for (const e of EDGES) if (e.status !== 'ok') setEdge(e, 'ok', null, 0); }
+const affectedBy = e => [...trains.values()].filter(t => t.route && t.route.segs.slice(t.seg).some(s => s.e === e)).length;
+function triggerCut(e, escalated) {
+  setEdge(e, 'cut', pick(CAUSE_CUT), rnd(15, 45) * 60);
+  const n = affectedBy(e);
+  addLog('crit', `Corte de vía · ${e.name}`, `${escalated ? 'Empeora la incidencia: ' : ''}${e.cause} · ${n} ${n === 1 ? 'tren afectado' : 'trenes afectados'}`, {edge:e});
+}
+function triggerWarn(e) { setEdge(e, 'warn', pick(CAUSE_WARN), rnd(20, 60) * 60); addLog('warn', `Precaución · ${e.name}`, `${e.cause} · velocidad reducida`, {edge:e}); }
+function simIncidents() {
+  const nWarn = EDGES.filter(e => e.status === 'warn').length, nCut = EDGES.filter(e => e.status === 'cut').length, roll = Math.random();
+  if (roll < .6) { const e = pick(EDGES.filter(x => x.status === 'ok')); if (nCut < 2 && Math.random() < .25) triggerCut(e); else if (nWarn < 7) triggerWarn(e); }
+  else if (roll < .7 && nCut < 2) { const w = EDGES.filter(x => x.status === 'warn'); if (w.length) triggerCut(pick(w), true); }
+}
+function simRestorations() {
+  for (const e of EDGES) {
+    if (e.status === 'ok' || state.simTime < e.until) continue;
+    if (e.status === 'cut' && Math.random() < .45) { setEdge(e, 'warn', 'Restablecida con limitación temporal', rnd(10, 25) * 60); addLog('warn', `Vía restablecida con limitación · ${e.name}`, 'Circulación por vía única a velocidad reducida', {edge:e}); }
+    else { setEdge(e, 'ok', null, 0); addLog('ok', `Circulación normalizada · ${e.name}`, 'Tramo operativo sin restricciones', {edge:e}); }
+  }
+}
+function simTick(dtReal) {
+  const dt = dtReal * state.speed; if (!dt) return;
+  state.simTime += dt * 1000;
+  const steps = Math.ceil(dt / 2), h = dt / steps;
+  for (const t of [...trains.values()]) {
+    for (let k = 0; k < steps && !t.done; k++) stepSim(t, h);
+    if (t.done) { removeTrain(t); sim.used.delete(t.number); sim.pending.push({type:t.type, at:state.simTime + rnd(60, 600) * 1000}); continue; }
+    t.delay = simDelay(t); t.held = simStatus(t).code === 'held';
+    t.pos = routePoint(t.route, t.dist);
+    if (map.hasLayer(groups[t.cat])) { t.marker.setLatLng(t.pos); styleTrain(t); }
+    if (t.delay >= 15 && !t.alerted) { t.alerted = true; addLog('late', `${t.label} ${t.number} · +${t.delay} min`, `${ST[t.route.path[0]].n} → ${ST[t.route.path[t.route.path.length - 1]].n} · retraso superior a 15 min`, {train:t}); }
+    else if (t.delay < 5) t.alerted = false;
+  }
+  for (const p of [...sim.pending]) if (state.simTime >= p.at) { sim.pending.splice(sim.pending.indexOf(p), 1); spawnSim(p.type, false); }
+  sim.incidentClock += dt;
+  while (sim.incidentClock > 300) { sim.incidentClock -= 300; simIncidents(); }
+  simRestorations();
+}
+function startSim() {
+  state.simTime = Date.now(); sim.pending = []; sim.used.clear(); sim.incidentClock = 0;
+  for (const type in SIM) for (let i = 0; i < SIM[type].fleet; i++) spawnSim(type, true);
+  const seed = [...EDGES].sort(() => Math.random() - .5);
+  triggerCut(seed[0]); seed.slice(1, 4).forEach(e => triggerWarn(e));
+}
+
+/* =====================================================================
+   8. MODOS
+   ===================================================================== */
+function setMode(m) {
+  state.mode = m;
+  document.body.className = 'mode-' + m;
+  const fr = $('flt-fr');
+  fr.classList.toggle('disabled', m === 'live');
+  $('fr-note').textContent = m === 'live' ? '· sin datos públicos' : '';
+  $('net-mode').textContent = m === 'live' ? 'estado inferido' : 'km';
+  renderLegend(); renderDiag();
+}
+function setConn(kind, text) { const c = $('conn'); c.className = 'conn ' + kind; c.querySelector('span').textContent = text; }
+function enterLive() {
+  clearTrains(); resetEdges(); deselect();
+  live.polls = 0;
+  setMode('live'); setConn('live', 'En directo');
+  setBanner('');
+  if (state.station) renderStation();
+}
+function enterSim(reason) {
+  clearTrains(); resetEdges(); deselect();
+  setMode('sim'); setConn('sim', 'Simulación');
+  startSim();
+  addLog('info', 'Modo simulación', reason ? `${reason}. Se reintentará la conexión cada minuto.` : 'Datos ficticios generados localmente');
+  setBanner(reason ? `<b>Sin conexión con Renfe.</b> Mostrando una simulación. Revisa «Fuente de datos» en la barra lateral.` : '');
+  if (state.station) renderStation();
+}
+function enterOffline() {
+  clearTrains(); resetEdges(); deselect();
+  setMode('offline'); setConn('err', 'Sin conexión');
+  setBanner('<b>No se pudo conectar con Renfe.</b> Configura un proxy en «Fuente de datos» o cambia a modo automático.');
+}
+
+/* =====================================================================
+   9. PANEL DE ESTACIÓN — próximas llegadas y salidas
+   ===================================================================== */
+function boardFor(st) {
+  const arr = [], dep = [], now = nowMs();
+  if (state.mode === 'sim') {
+    if (!st.net) return {arr, dep};
+    for (const t of trains.values()) {
+      if (t.type === 'fr') continue;
+      for (const u of simUpcoming(t)) {
+        if (u.code !== st.id) continue;
+        const r = t.route, base = {t, label:t.label, number:t.number, cat:t.cat};
+        if (u.arrEst && u.k > 0) arr.push({...base, est:u.arrEst, sched:u.arrSched, delay:Math.max(0, Math.round((u.arrEst - u.arrSched) / 60000)), other:ST[r.path[0]].n});
+        if (u.depEst) dep.push({...base, est:u.depEst, sched:u.depSched, delay:Math.max(0, Math.round((u.depEst - u.depSched) / 60000)), other:ST[r.path[r.path.length - 1]].n});
+      }
+    }
+  } else if (state.mode === 'live') {
+    for (const [id, r] of live.routes) {
+      const t = trains.get(id), stops = r.stops;
+      const i = stops.findIndex(s => st.codes.has(s.code)); if (i < 0) continue;
+      if (t && t.next) { const j = stops.findIndex(s => s.code === t.next); if (j >= 0 && i < j) continue; }
+      const sched = parseTime(stops[i].time, now); if (!sched) continue;
+      const delay = t ? t.delay : 0, est = sched + delay * 60000;
+      if (est < now - 60000) continue;
+      const base = {t, label:t ? t.label : 'Tren', number:id, cat:t ? t.cat : 'md', est, sched, delay};
+      if (i > 0) arr.push({...base, other:stationName(stops[0].code)});
+      if (i < stops.length - 1) dep.push({...base, other:stationName(stops[stops.length - 1].code)});
+    }
+    if (!live.routes.size) {   // sin recorridos: sólo la próxima estación de cada tren
+      for (const t of trains.values()) if (st.codes.has(t.next) && t.nextTime) arr.push({t, label:t.label, number:t.number, cat:t.cat, est:t.nextTime, sched:t.nextTime - t.delay * 60000, delay:t.delay, other:stationName(t.origin)});
+    }
+  }
+  const by = (a, b) => a.est - b.est;
+  return {arr:arr.sort(by).slice(0, 8), dep:dep.sort(by).slice(0, 8)};
+}
+function boardRows(list, kind) {
+  if (!list.length) return `<div class="none">${state.mode === 'live' && !live.routes.size && kind === 'dep' ? 'Cargando recorridos de Renfe…' : `No hay ${kind === 'arr' ? 'llegadas' : 'salidas'} previstas en las próximas horas.`}</div>`;
+  const now = nowMs();
+  return list.map((x, i) => {
+    const cd = fmtCountdown(x.est - now);
+    return `<button class="brow" data-i="${kind}:${i}">
+      <div class="cd${cd.now ? ' now' : ''}">${cd.v}<small>${cd.u || '&nbsp;'}</small></div>
+      <div class="who"><b>${kind === 'arr' ? 'De ' : 'A '}${esc(x.other)}</b><span><i style="background:${CAT_COLOR[x.cat]}"></i>${esc(x.label)} ${esc(x.number)}</span></div>
+      <div class="tm">${x.delay > 0 ? `<s>${fmtHM(x.sched)}</s>` : ''}<span class="pill ${delayClass(x.delay)}">${fmtHM(x.est)}${x.delay > 0 ? ' +' + x.delay : ''}</span></div>
+    </button>`;
+  }).join('');
+}
+let boardCache = null;
+function openStation(st) {
+  state.station = st;
+  showView('station');
+  if (st.marker) map.panTo(st.c, {animate:true});
+  renderStation();
+}
+function closeStation() { state.station = null; showView(state.tab); }
+function renderStation() {
+  const st = state.station; if (!st) return;
+  const b = boardCache = boardFor(st);
+  const code = st.code ? String(st.code).padStart(5, '0') : null;
+  const src = state.mode === 'live' ? 'Renfe · tiempo real' : state.mode === 'sim' ? 'Simulación' : 'Sin datos';
+  $('station').innerHTML = `
+    <div class="st-head">
+      <button class="back" id="st-back"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>Volver</button>
+      <h2>${esc(st.name)}</h2>
+      <div class="meta">${code ? `<span class="pill">Código ${code}</span>` : ''}<span>${src}</span></div>
+    </div>
+    ${state.mode === 'sim' ? '<div class="st-note">Horarios simulados. Para la información oficial usa «Más información».</div>' : ''}
+    <div class="brd">
+      <h3><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>Próximas llegadas</h3>
+      ${boardRows(b.arr, 'arr')}
+      <h3><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>Próximas salidas</h3>
+      ${boardRows(b.dep, 'dep')}
+    </div>
+    <div class="more">
+      ${code ? `<a class="btn" href="${CFG.ADIF_BOARD(code)}" target="_blank" rel="noopener">Más información
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>
+        <p>Abre el panel oficial de Adif con todas las salidas y llegadas de la estación.</p>` : ''}
+      <a class="btn ghost" href="${CFG.ADIF_STATIONS}" target="_blank" rel="noopener">Buscador de estaciones de Adif</a>
+    </div>`;
+  $('st-back').onclick = closeStation;
+  $('station').querySelectorAll('.brow').forEach(el => el.onclick = () => {
+    const [k, i] = el.dataset.i.split(':'); const x = (k === 'arr' ? b.arr : b.dep)[+i];
+    if (x && x.t) focusTrain(x.t);
+  });
+}
+
+/* =====================================================================
+   10. BARRA LATERAL
+   ===================================================================== */
+function showView(v) {
+  document.querySelectorAll('.view').forEach(el => el.classList.toggle('on', el.id === (v === 'station' ? 'station' : 'v-' + v)));
+  if (v !== 'station') state.tab = v;
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', v !== 'station' && b.dataset.tab === v));
+  if (v === 'trenes') renderTrainList();
+}
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => { state.station = null; showView(b.dataset.tab); });
+
+const logEl = $('log'); let logTotal = 0;
+function addLog(level, title, detail, ref) {
+  const li = document.createElement('li');
+  li.className = level + (ref ? ' clk' : '');
+  li.innerHTML = `<time>${fmtHM(nowMs())}</time><div><div class="t">${esc(title)}</div><div class="dd">${esc(detail)}</div></div>`;
+  if (ref && ref.edge) li.onclick = () => focusEdge(ref.edge);
+  if (ref && ref.train) li.onclick = () => focusTrain(ref.train);
+  logEl.prepend(li);
+  while (logEl.children.length > 120) logEl.lastChild.remove();
+  $('l-cnt').textContent = ++logTotal;
+}
+function focusEdge(e) {
+  map.flyToBounds(L.latLngBounds(e.geom), {padding:[70, 70], maxZoom:9, duration:.8});
+  map.once('moveend', () => e.glow.openPopup(e.geom[Math.floor(e.geom.length / 2)]));
+}
+
+function trainDesc(t) {
+  if (t.src === 'sim') return `${ST[t.route.path[0]].n} → ${ST[t.route.path[t.route.path.length - 1]].n}`;
+  return `${stationName(t.origin)} → ${stationName(t.dest)}`;
+}
+function renderTrainList() {
+  const q = $('tq').value.trim().toLowerCase(), sort = $('tsort').value;
+  let list = [...trains.values()].filter(t => map.hasLayer(groups[t.cat]));
+  if (q) list = list.filter(t => (t.number + ' ' + t.label + ' ' + trainDesc(t)).toLowerCase().includes(q));
+  list.sort(sort === 'num' ? (a, b) => a.number.localeCompare(b.number) : sort === 'cat' ? (a, b) => a.cat.localeCompare(b.cat) || b.delay - a.delay : (a, b) => b.delay - a.delay);
+  const shown = list.slice(0, 250);
+  $('tlist').innerHTML = shown.length ? shown.map((t, i) => `<button class="row" data-i="${i}">
+      <i class="d" style="background:${CAT_COLOR[t.cat]}"></i>
+      <div style="min-width:0"><div class="t1">${esc(t.label)} <small>${esc(t.number)}</small></div><div class="t2">${esc(trainDesc(t))}</div></div>
+      <span class="pill ${delayClass(t.delay)}">${t.delay > 0 ? '+' + t.delay + '′' : 'En hora'}</span></button>`).join('')
+    + (list.length > shown.length ? `<div class="empty">… y ${list.length - shown.length} más. Usa el filtro.</div>` : '')
+    : `<div class="empty">${trains.size ? 'Ningún tren coincide con el filtro.' : 'No hay trenes en circulación.'}</div>`;
+  $('tlist').querySelectorAll('.row').forEach(el => el.onclick = () => focusTrain(shown[+el.dataset.i]));
+}
+$('tq').oninput = renderTrainList; $('tsort').onchange = renderTrainList;
+
+// Búsqueda global
+const qEl = $('q'), resEl = $('results'); let results = [], hl = 0;
+function doSearch() {
+  const q = qEl.value.trim().toLowerCase();
+  if (!q) { resEl.classList.remove('open'); return; }
+  const nq = q.normalize('NFD').replace(/\p{Diacritic}/gu, '');
+  const stn = [...STATIONS.values()].filter(s => !s.junction && s.name.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').includes(nq))
+    .sort((a, b) => (b.major - a.major) || (b.net - a.net) || a.name.localeCompare(b.name)).slice(0, 5).map(s => ({kind:'st', s}));
+  const trn = [...trains.values()].filter(t => t.number.includes(q) || (t.label + ' ' + t.number).toLowerCase().includes(q)).slice(0, 6).map(t => ({kind:'tr', t}));
+  results = [...stn, ...trn]; hl = 0;
+  resEl.innerHTML = results.length ? results.map((r, i) => r.kind === 'st'
+    ? `<button data-i="${i}" class="${i === hl ? 'hl' : ''}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a98ad" stroke-width="2"><circle cx="12" cy="12" r="4"/></svg>${esc(r.s.name)}<small>Estación</small></button>`
+    : `<button data-i="${i}" class="${i === hl ? 'hl' : ''}"><i style="width:9px;height:9px;border-radius:50%;background:${CAT_COLOR[r.t.cat]}"></i>${esc(r.t.label)} ${esc(r.t.number)}<small>${esc(trainDesc(r.t))}</small></button>`).join('')
+    : '<div class="none">Sin resultados</div>';
+  resEl.classList.add('open');
+  resEl.querySelectorAll('button').forEach(b => b.onmousedown = ev => { ev.preventDefault(); choose(+b.dataset.i); });
+}
+function choose(i) {
+  const r = results[i]; if (!r) return;
+  qEl.value = ''; resEl.classList.remove('open'); qEl.blur();
+  if (r.kind === 'st') { map.flyTo(r.s.c, Math.max(map.getZoom(), 9), {duration:.8}); openStation(r.s); } else focusTrain(r.t);
+}
+qEl.oninput = doSearch;
+qEl.onkeydown = e => {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); hl = clamp(hl + (e.key === 'ArrowDown' ? 1 : -1), 0, results.length - 1); resEl.querySelectorAll('button').forEach((b, i) => b.classList.toggle('hl', i === hl)); }
+  else if (e.key === 'Enter') choose(hl);
+  else if (e.key === 'Escape') { qEl.value = ''; resEl.classList.remove('open'); }
+};
+qEl.onblur = () => setTimeout(() => resEl.classList.remove('open'), 150);
+
+// Filtros
+document.querySelectorAll('input[data-cat]').forEach(cb => cb.addEventListener('change', () => {
+  const g = groups[cb.dataset.cat];
+  if (cb.checked) {
+    map.addLayer(g);
+    for (const t of trains.values()) if (t.cat === cb.dataset.cat) { t.marker.setLatLng(t.pos); styleTrain(t, true); }
+  } else { if (state.selected && state.selected.cat === cb.dataset.cat) state.selected.marker.closePopup(); map.removeLayer(g); }
+  updateDashboard();
+}));
+$('f-labels').addEventListener('change', e => mapEl.classList.toggle('no-labels', !e.target.checked));
+
+// Fuente de datos
+$('s-mode').value = settings.mode; $('s-proxy').value = settings.proxy; $('s-pub').checked = settings.pub; $('s-base').value = settings.base;
+$('s-base').onchange = () => { settings.base = $('s-base').value; store.set('base', settings.base); startTiles(); };
+function applySettings() {
+  settings.mode = $('s-mode').value; settings.proxy = $('s-proxy').value.trim(); settings.pub = $('s-pub').checked;
+  store.set('mode', settings.mode); store.set('proxy', settings.proxy); store.set('pub', settings.pub);
+  live.via = null; live.failures = 0; live.routesAt = 0;
+  if (settings.mode === 'sim') { clearTimeout(live.timer); if (state.mode !== 'sim') enterSim(); }
+  else { setConn('wait', 'Conectando'); pollLive(); }
+}
+$('s-mode').onchange = applySettings; $('s-pub').onchange = applySettings;
+$('s-proxy').onchange = applySettings;
+document.querySelectorAll('#speed button').forEach(b => b.onclick = () => {
+  state.speed = +b.dataset.s;
+  document.querySelectorAll('#speed button').forEach(x => x.classList.toggle('on', x === b));
+  setConn('sim', state.speed ? `Simulación ×${state.speed}` : 'Simulación en pausa');
+});
+function renderDiag() {
+  const src = state.mode === 'live' ? `Renfe ${live.snapshot ? 'casi en directo' : 'en directo'} (${live.via})` : state.mode === 'sim' ? 'Simulación' : state.mode === 'offline' ? 'Sin conexión' : 'Conectando…';
+  $('src-sum').textContent = src;
+  const lines = [
+    `Mapa base: ${baseStatus}`,
+    `Posiciones: flotaLD.json${live.lastOk ? ' · última ' + fmtHMS(live.lastOk) : ''}`,
+    `Recorridos: ${live.routes.size ? live.routes.size + ' trenes · ' + fmtHM(live.routesAt) : '—'}`,
+  ];
+  if (live.lastErr) lines.push('Último error: ' + live.lastErr);
+  $('diag').textContent = lines.join('\n');
+}
+
+function updateDashboard() {
+  $('clock').textContent = fmtHMS(nowMs());
+  const all = [...trains.values()], by = {av:0, ld:0, md:0, fr:0}, buckets = [0, 0, 0, 0];
+  let onTime = 0, sum = 0, visible = 0;
+  for (const t of all) {
+    by[t.cat]++; sum += t.delay; if (t.delay < 5) onTime++;
+    buckets[t.delay < 5 ? 0 : t.delay < 15 ? 1 : t.delay < 30 ? 2 : 3]++;
+    if (map.hasLayer(groups[t.cat])) visible++;
+  }
+  const n = all.length;
+  for (const k in by) { $('m-' + k).textContent = by[k]; $('c-' + k).textContent = by[k]; }
+  $('k-total').textContent = n; $('t-cnt').textContent = n;
+  $('k-visible').textContent = state.mode === 'live' ? `${visible} visibles · datos Renfe${live.feedTime ? ' ' + fmtHMS(live.feedTime) : ''}` : state.mode === 'sim' ? `${visible} visibles · simulación` : state.mode === 'offline' ? 'Sin conexión con Renfe' : 'Conectando con Renfe…';
+  $('k-punct').innerHTML = n ? `${Math.round(onTime / n * 100)}<em>%</em>` : '–';
+  $('k-delay').innerHTML = n ? `${(sum / n).toFixed(1).replace('.', ',')}<em>min</em>` : '–';
+  buckets.forEach((v, i) => { $('db-' + i).style.width = (n ? v / n * 100 : 0) + '%'; $('dl-' + i).textContent = v; });
+  const km = {ok:0, warn:0, cut:0};
+  for (const e of EDGES) km[e.status] += e.len / 1000;
+  const inc = EDGES.filter(e => e.status !== 'ok').length;
+  $('k-inc').textContent = inc; $('k-inc').classList.toggle('has', EDGES.some(e => e.status === 'cut'));
+  for (const s in km) { $('nb-' + s).style.width = (km[s] / TOTAL_KM * 100) + '%'; $('nl-' + s).textContent = nf.format(Math.round(km[s])) + ' km'; }
+  $('net-total').textContent = nf.format(Math.round(TOTAL_KM)) + ' km';
+  if (state.selected && trains.has(state.selected.id) && state.selected.marker.isPopupOpen()) state.selected.pop.innerHTML = popupHTML(state.selected);
+}
+
+/* =====================================================================
+   11. BUCLES
+   ===================================================================== */
+let lastTick = performance.now();
+setInterval(() => {
+  const now = performance.now(), dtReal = Math.min(0.25, (now - lastTick) / 1000); lastTick = now;
+  if (state.mode === 'sim') simTick(dtReal);
+  else if (state.mode === 'live') {
+    const t0 = Date.now();
+    for (const t of trains.values()) {
+      if (!t.anim) continue;
+      const a = t.anim, f = clamp((t0 - a.t0) / (a.t1 - a.t0), 0, 1);
+      t.pos = a.e ? pointAt(a.e, a.s0 + (a.s1 - a.s0) * f) : [a.from[0] + (a.to[0] - a.from[0]) * f, a.from[1] + (a.to[1] - a.from[1]) * f];
+      if (map.hasLayer(groups[t.cat])) t.marker.setLatLng(t.pos);
+      if (f >= 1) t.anim = null;
+    }
+  }
+}, 50);
+setInterval(updateDashboard, 1000);
+setInterval(() => { if (state.station) renderStation(); }, 5000);
+setInterval(() => { if (state.tab === 'trenes' && !state.station && document.activeElement !== $('tq')) renderTrainList(); }, 4000);
+
+/* =====================================================================
+   12. ARRANQUE
+   ===================================================================== */
+syncZoom();
+setMode('wait');
+if (settings.mode === 'sim') enterSim(); else pollLive();
+updateDashboard();
+})();
+</script>
+</body>
+</html>
