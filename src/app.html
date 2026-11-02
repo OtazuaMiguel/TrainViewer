@@ -305,6 +305,8 @@ body:not(.mode-sim) .sim-only{display:none!important}
 .tl-time b{font-weight:600;color:var(--text)}
 .tl-row.passed .tl-time b{color:var(--dim);font-weight:500}
 .tl .none{padding:12px 16px;color:var(--muted)}
+.tl-more{display:flex;align-items:center;gap:6px;margin:0 16px 4px 44px;padding:4px 0;background:none;border:0;color:var(--dim);font-size:11.5px;cursor:pointer}
+.tl-more:hover{color:var(--text)}
 .tv-foot{padding:0 16px 16px}
 .row .t3{display:flex;align-items:center;gap:7px;color:var(--dim);font-size:11px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rp{flex:none;width:38px;height:3px;border-radius:9px;background:var(--line-2);overflow:hidden}
@@ -326,6 +328,7 @@ body:not(.mode-sim) .sim-only{display:none!important}
 #map.focus .leaflet-tooltip.st-label:not(.st-focus){opacity:.22}
 #map .tmk{transition:opacity .4s ease,filter .4s ease}
 .leaflet-tooltip.st-focus{display:block!important;color:#fff;font-weight:600}
+#map:not(.z9) .leaflet-tooltip.st-focus.st-fminor{display:none!important}
 .route-flow{animation:flow 1.2s linear infinite}
 @keyframes flow{to{stroke-dashoffset:-24}}
 .trip-ring{animation:ring 1.8s ease-in-out infinite}
@@ -978,7 +981,7 @@ function clearTrains() { for (const t of [...trains.values()]) removeTrain(t); }
 function routePathOf(t) { return state.mode === 'live' ? liveRoutePath(t) : simRoutePath(t); }
 function selectTrain(t, trip) {
   if (state.selected && state.selected !== t) deselect();
-  state.selected = t; state.trip = trip || null;
+  state.selected = t; state.trip = trip || null; state.showPassed = false;
   drawFocus(t, trip);
   styleTrain(t);
   showView('train');
@@ -1052,7 +1055,7 @@ function liveRoutePath(t) {
 function routeStopsOf(t) {
   if (t.src === 'sim') { const T = SIM[t.type], r = t.route, last = r.path.length - 1; return r.path.filter((c, k) => k === 0 || k === last || T.stopAt(c)).map(c => ({name:ST[c].n, c:ST[c].c})); }
   const r = live.routes.get(t.id); if (!r) return [];
-  return r.stops.map(s => { const st = CODE2ST.get(s.code), cs = CAT.get(s.code); const c = st ? st.c : cs ? cs.c : null; return c ? {name:exactName(s.code), c} : null; }).filter(Boolean);
+  return r.stops.map(s => { const st = CODE2ST.get(s.code), cs = CAT.get(s.code); const c = st ? st.c : cs ? cs.c : null; return c ? {name:exactName(s.code), c, code:s.code} : null; }).filter(Boolean);
 }
 
 // ---------- Modo foco: sólo el trayecto del tren seleccionado en color ----------
@@ -1077,10 +1080,11 @@ function drawFocus(t, trip) {
     );
   }
   const stops = routeStopsOf(t);
+  const nextName = (state.mode === 'live' ? liveView(t) : simView(t)).next;
   stops.forEach((s, i) => {
-    const end = i === 0 || i === stops.length - 1;
+    const end = i === 0 || i === stops.length - 1, key = end || s.name === nextName || (CODE2ST.get(norm(s.code))?.major);
     layers.push(L.circleMarker(s.c, {pane:'route', radius:end ? 6.5 : 4.5, color:end ? '#fff' : c, weight:end ? 2.5 : 2, fillColor:'#05080d', fillOpacity:1, interactive:false})
-      .bindTooltip(esc(s.name), {permanent:true, direction:'right', offset:[6, 0], className:'st-label st-focus' + (end ? ' st-major' : '')}));
+      .bindTooltip(esc(s.name), {permanent:true, direction:'right', offset:[6, 0], className:'st-label st-focus' + (end ? ' st-major' : '') + (key ? '' : ' st-fminor')}));
   });
   if (trip) for (const st of [trip.from, trip.to]) layers.push(L.circleMarker(st.c, {pane:'route', radius:11, color:'#fff', weight:2, fill:false, interactive:false, className:'trip-ring'}));
   routeLayer = L.layerGroup(layers).addTo(map);
@@ -1159,12 +1163,14 @@ function renderTrainView(scrollToNext) {
       <button class="btn ghost sm" id="tv-follow">${state.follow ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>Dejar de seguir' : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Seguir en el mapa'}</button>
       <button class="btn ghost sm" id="tv-fit"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></svg>Ver recorrido</button>
     </div>
-    <div class="tl">${tl ? tl.map((s, i) => `
+    <div class="tl">${tl ? (() => { const passed = tl.filter(s => s.passed).length, hide = !state.showPassed && passed > 2 ? passed - 1 : 0;
+      return (hide ? `<button class="tl-more" id="tl-more">${hide} paradas anteriores<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></button>` : '')
+      + tl.map((s, i) => i < hide ? '' : `
       <button class="tl-row${s.passed ? ' passed' : ''}${s.next || s.current ? ' next' : ''}" data-i="${i}">
         <i class="tl-dot"></i>
         <span class="tl-name">${esc(s.name)}</span>
         <span class="tl-time">${s.est && s.delay > 0 ? `<s>${fmtHM(s.sched)}</s><b class="c-${delayClass(s.delay)}">${fmtHM(s.est)}</b>` : s.sched ? `<b>${fmtHM(s.sched)}</b>` : ''}</span>
-      </button>`).join('') : '<div class="none">Cargando recorrido…</div>'}</div>
+      </button>`).join(''); })() : '<div class="none">Cargando recorrido…</div>'}</div>
     <div class="pp-foot tv-foot">${esc(v.foot || '')}</div>`;
   $('tv-back').onclick = closeTrain;
   $('tv-follow').onclick = () => {
@@ -1177,7 +1183,8 @@ function renderTrainView(scrollToNext) {
     const s = tl[+b.dataset.i], st = s.id ? STATIONS.get(s.id) : CODE2ST.get(s.code);
     if (st) { closeTrain(); map.flyTo(st.c, Math.max(map.getZoom(), 9), {duration:.8}); openStation(st, false); }
   });
-  if (scrollToNext) { const n = el.querySelector('.tl-row.next') || el.querySelector('.tl-row:not(.passed)'); if (n) n.scrollIntoView({block:'center'}); }
+  const more = $('tl-more'); if (more) more.onclick = () => { state.showPassed = true; renderTrainView(); };
+  if (scrollToNext) el.scrollTop = 0;
 }
 
 function edgeHTML(e) {
