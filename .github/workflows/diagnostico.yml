@@ -1,0 +1,43 @@
+name: Diagnóstico de la web
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Proveedores de teselas (sin clave)
+        run: |
+          for u in \
+            "https://a.basemaps.cartocdn.com/dark_nolabels/6/31/24.png" \
+            "https://a.basemaps.cartocdn.com/rastertiles/dark_nolabels/6/31/24.png" \
+            "https://a.basemaps.cartocdn.com/dark_all/6/31/24.png" \
+            "https://tile.openstreetmap.org/6/31/24.png" \
+            "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/6/24/31" \
+            "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/6/24/31" \
+            "https://www.ign.es/wmts/ign-base?layer=IGNBaseTodo&style=default&tilematrixset=GoogleMapsCompatible&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image/png&TileMatrix=6&TileCol=31&TileRow=24" \
+            "https://tms-ign-base.idee.es/1.0.0/IGNBaseTodo/6/31/39.jpeg" ; do
+            out=$(curl -s -o /tmp/t -w '%{http_code} %{content_type} %{size_download}' -m 20 -e "https://paticuaker.github.io/" -A "Mozilla/5.0" "$u")
+            body=""; case "$out" in *image*) ;; *) body=" cuerpo=$(head -c 160 /tmp/t | tr '\n' ' ')";; esac
+            echo "$out $u$body"
+          done
+      - name: Abrir la web en Chromium
+        run: |
+          npm i --no-save playwright@1.49.1 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          node .github/diag/check.mjs
+      - name: Guardar capturas en la rama diagnostico
+        run: |
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          git checkout --orphan diagnostico
+          git rm -rq --cached . ; git add -f diag/
+          git commit -qm "Diagnóstico $(date -u +%FT%TZ)"
+          git push -f origin diagnostico
