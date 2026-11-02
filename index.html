@@ -1971,6 +1971,8 @@ function tripsSched(A, B) {
   return out.sort((x, y) => x.dep - y.dep).slice(0, 15);
 }
 // Tren programado (aún sin salir o sin posición): se muestra con su recorrido y horario
+// «mañana» si la hora es de otro día que hoy (hora peninsular)
+const dayTag = ms => { const a = madridParts(ms), b = madridParts(Date.now()); return a.day !== b.day ? (ms > Date.now() ? 'mañana ' : 'ayer ') : ''; };
 function planBadge(trip) { const k = tripState(trip).kind; return k === 'plan' ? '<em class="k-plan">programado</em>' : k === 'nolive' ? '<em class="k-nolive">sin datos en directo</em>' : k === 'cut' ? '<em class="k-cut">afectado por corte</em>' : ''; }
 function plannedTrain(trip) {
   const c0 = stationCoord(trip.stops[0].code);
@@ -2029,7 +2031,7 @@ function boardRows(list, kind) {
     return `<button class="brow${x.kind === 'cut' ? ' is-cut' : ''}" data-i="${kind}:${i}">
       <div class="cd${cd.now ? ' now' : ''}">${cd.v}<small>${cd.u || '&nbsp;'}</small></div>
       <div class="who"><b>${kind === 'arr' ? 'De ' : 'A '}${esc(x.other)}</b><span><i style="background:${CAT_COLOR[x.cat]}"></i>${esc(x.label)} ${esc(x.number)}${x.kind === 'plan' ? ' · <em class="k-plan">programado</em>' : x.kind === 'nolive' ? ' · <em class="k-nolive">sin datos en directo</em>' : x.kind === 'live' ? ' · <em class="k-live">en circulación</em>' : x.kind === 'cut' ? ' · <em class="k-cut">afectado por corte</em>' : ''}</span></div>
-      <div class="tm">${x.delay > 0 ? `<s>${fmtHM(x.sched)}</s>` : ''}<span class="pill ${x.kind === 'nolive' || x.kind === 'cut' ? 'plan' : delayClass(x.delay)}">${fmtHM(x.est)}${x.delay > 0 ? ' +' + x.delay : ''}</span></div>
+      <div class="tm">${x.delay > 0 ? `<s>${fmtHM(x.sched)}</s>` : ''}<span class="pill ${x.kind === 'nolive' || x.kind === 'cut' ? 'plan' : delayClass(x.delay)}">${dayTag(x.est)}${fmtHM(x.est)}${x.delay > 0 ? ' +' + x.delay : ''}</span></div>
     </button>`;
   }).join('');
 }
@@ -2187,7 +2189,7 @@ function doSearch() {
     const list = tripsFor(trip.from, trip.to);
     results = list.map(x => ({kind:'trip', t:x.t || plannedTrain(x.trip), trip}));
     hl = 0;
-    resEl.innerHTML = `<div class="res-h">Viajes ${esc(trip.from.name)} → ${esc(trip.to.name)}</div>` + (list.length ? list.map((x, i) => { const o = x.t || x.trip; return `<button data-i="${i}" class="${i === hl ? 'hl' : ''}"><i style="width:9px;height:9px;border-radius:50%;background:${CAT_COLOR[o.cat]}"></i>${esc(o.label)} ${esc(x.t ? x.t.number : x.trip.num)}${x.kind === 'plan' ? '<em class="k-plan">programado</em>' : x.kind === 'nolive' ? '<em class="k-nolive">sin datos</em>' : x.kind === 'cut' ? '<em class="k-cut">afectado por corte</em>' : ''}<small>${x.dep ? fmtHM(x.dep) : '—'} → ${fmtHM(x.arr)}${x.delay > 0 ? ` <b class="c-${delayClass(x.delay)}">+${x.delay}′</b>` : ''}</small></button>`; }).join('')
+    resEl.innerHTML = `<div class="res-h">Viajes ${esc(trip.from.name)} → ${esc(trip.to.name)}</div>` + (list.length ? list.map((x, i) => { const o = x.t || x.trip; return `<button data-i="${i}" class="${i === hl ? 'hl' : ''}"><i style="width:9px;height:9px;border-radius:50%;background:${CAT_COLOR[o.cat]}"></i>${esc(o.label)} ${esc(x.t ? x.t.number : x.trip.num)}${x.kind === 'plan' ? '<em class="k-plan">programado</em>' : x.kind === 'nolive' ? '<em class="k-nolive">sin datos</em>' : x.kind === 'cut' ? '<em class="k-cut">afectado por corte</em>' : x.kind === 'live' ? '<em class="k-live">en circulación</em>' : ''}<small>${x.dep ? dayTag(x.dep) + fmtHM(x.dep) : '—'} → ${fmtHM(x.arr)}${x.delay > 0 ? ` <b class="c-${delayClass(x.delay)}">+${x.delay}′</b>` : ''}</small></button>`; }).join('')
       : `<div class="none">Ahora no circula ningún tren de ${esc(trip.from.name)} a ${esc(trip.to.name)}.</div>`);
     resEl.classList.add('open');
     resEl.querySelectorAll('button').forEach(b => b.onmousedown = ev => { ev.preventDefault(); choose(+b.dataset.i); });
@@ -2211,11 +2213,12 @@ function doSearch() {
       const live = liveOfTrip(tr);
       trn.push({kind:'tr', t:live || plannedTrain(tr)}); shown.add(num);
     }
+    trn.sort((a, b) => (norm(b.t.number) === norm(qn)) - (norm(a.t.number) === norm(qn)));
   }
   results = [...stn, ...trn]; hl = 0;
   resEl.innerHTML = results.length ? results.map((r, i) => r.kind === 'st'
     ? `<button data-i="${i}" class="${i === hl ? 'hl' : ''}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a98ad" stroke-width="2"><circle cx="12" cy="12" r="4"/></svg>${esc(r.s.name)}<small>${r.s.net ? (r.s.codes.size > 1 ? 'Ciudad · todas sus estaciones' : 'Estación') : r.s.hub ? 'Estación · ' + esc(r.s.hub.name) : 'Estación'}</small></button>`
-    : `<button data-i="${i}" class="${i === hl ? 'hl' : ''}"><i style="width:9px;height:9px;border-radius:50%;background:${CAT_COLOR[r.t.cat]}"></i>${esc(r.t.label)} ${esc(r.t.number)}${r.t.src === 'plan' ? planBadge(r.t.plan) : ''}<small>${esc(trainDesc(r.t))}${r.t.src === 'plan' ? ' · ' + fmtHM(r.t.plan.stops[0].dep) + '–' + fmtHM(r.t.plan.stops[r.t.plan.stops.length - 1].arr) : ''}</small></button>`).join('')
+    : `<button data-i="${i}" class="${i === hl ? 'hl' : ''}"><i style="width:9px;height:9px;border-radius:50%;background:${CAT_COLOR[r.t.cat]}"></i>${esc(r.t.label)} ${esc(r.t.number)}${r.t.src === 'plan' ? planBadge(r.t.plan) : ''}<small>${esc(trainDesc(r.t))}${r.t.src === 'plan' ? ' · ' + dayTag(r.t.plan.stops[0].dep) + fmtHM(r.t.plan.stops[0].dep) + '–' + fmtHM(r.t.plan.stops[r.t.plan.stops.length - 1].arr) : ''}</small></button>`).join('')
     : '<div class="none">Sin resultados</div>';
   resEl.classList.add('open');
   resEl.querySelectorAll('button').forEach(b => b.onmousedown = ev => { ev.preventDefault(); choose(+b.dataset.i); });
