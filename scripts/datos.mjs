@@ -87,7 +87,12 @@ async function incidencias() {
           let box = h; for (let i = 0; i < 4 && box && box.innerText.length < 300; i++) box = box.parentElement;
           return box ? box.innerText.replace(/\s+/g, ' ').trim() : '';
         }, av.title);
-        if (full.length > av.text.length) av.text = full.slice(0, 4000);
+        // El detalle repite título y regiones antes del texto: se corta desde donde empieza el resumen
+        let body = full;
+        const start = av.text ? full.indexOf(av.text.replace(/\.\.\.$/, '').slice(0, 40)) : -1;
+        if (start >= 0) body = full.slice(start);
+        body = body.replace(/\s*Consulta más información\..*$/i, '').replace(/\s*Enlace externo al portal.*$/i, '').trim();
+        if (start >= 0 && body.length > av.text.length) av.text = body.slice(0, 4000);
       } catch {}
       const slug = new URL(av.url).pathname.split('/').pop();
       items.push({ ...av, id: 'aviso-' + slug, kind: 'aviso' });

@@ -22,7 +22,7 @@ const GAZ = {
 const REGION = {
   'andalucia': 'SEV', 'comunitat valenciana': 'VLC', 'comunidad valenciana': 'VLC', 'levante': 'VLC', 'region de murcia': 'MUR',
   'galicia': 'SCQ', 'asturias': 'OVI', 'cantabria': 'SAN', 'cataluna': 'BCN', 'catalunya': 'BCN', 'pais vasco': 'BIL', 'euskadi': 'BIL',
-  'extremadura': 'BAD', 'aragon': 'ZAR', 'castilla y leon': 'VAL', 'navarra': 'PAM', 'la rioja': 'LOG', 'francia': 'FIG',
+  'extremadura': 'BAD', 'castilla la mancha': 'CRE', 'aragon': 'ZAR', 'castilla y leon': 'VAL', 'navarra': 'PAM', 'la rioja': 'LOG', 'francia': 'FIG',
 };
 const STATION_ALIAS = { 'donostia': 'SSB', 'donostia/san sebastian': 'SSB', 'san sebastian': 'SSB', 'valencia': 'VLC', 'alacant': 'ALC', 'castello': 'CAS', 'irun': 'IRU', 'a coruna': 'COU', 'la coruna': 'COU' };
 
@@ -77,7 +77,7 @@ export function pairsIn(sentence, generic = false) {
   }
   for (const m of sentence.matchAll(/\b(?:l[ií]nea|tramos?|trayecto|recorrido|relaci[oó]n|corredor|obras(?: en la l[ií]nea)?|obras)\s+(?:de alta velocidad |de ancho convencional |ferroviari[ao] |convencional )?((?:[A-ZÁÉÍÓÚÑ][\wÁÉÍÓÚáéíóúñÑçÇ'·/.]*(?:\s(?:de|del|la|el|y|de la)?\s?[A-ZÁÉÍÓÚÑ][\wÁÉÍÓÚáéíóúñÑçÇ'·/.]*)*)(?:\s?-\s?(?:[A-ZÁÉÍÓÚÑ][\wÁÉÍÓÚáéíóúñÑçÇ'·/.]*(?:\s(?:de|del|la|el|de la)?\s?[A-ZÁÉÍÓÚÑ][\wÁÉÍÓÚáéíóúñÑçÇ'·/.]*)*))+)/g)) {
     const parts = m[1].split(/\s?-\s?/);
-    for (let i = 0; i < parts.length - 1; i++) out.push([parts[i], parts[i + 1], 'linea']);
+    for (let i = 0; i < parts.length - 1; i++) out.push([parts[i], parts[i + 1], 'cadena']);
   }
   return out;
 }
@@ -122,8 +122,17 @@ function datesIn(t) {
 }
 
 // item: {id, kind:'estado'|'aviso', title, zones, text, url}
+const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 export function interpret(item, today = new Date()) {
-  const full = `${item.title}. ${item.text}`;
+  // Quita del texto el título repetido y la lista de regiones (en el detalle aparecen pegados al contenido)
+  let text = item.text || '';
+  if (item.title) text = text.split(item.title).join('. ');
+  const zones = (item.zones || '').split(/\s+[-/]\s+/).map(z => z.trim()).filter(Boolean);
+  if (zones.length) {   // sólo la lista que encabeza el texto (no las menciones dentro del contenido)
+    const m = new RegExp(zones.map(escRe).join('[\\s/-]+')).exec(text);
+    if (m && m.index < 40) text = text.slice(0, m.index) + '. ' + text.slice(m.index + m[0].length);
+  }
+  const full = `${item.title}. ${text}`;
   const n = norm(full);
   const res = { ...item, severity: 'info', note: null, pieces: [], unmatched: [] };
   if (RESTORED.test(norm(item.title))) { res.severity = 'ok'; return res; }
@@ -150,7 +159,8 @@ export function interpret(item, today = new Date()) {
     const generic = SEV_CUT.test(ns) || OPERATING.test(ns) || /retras|limitaci|via unica|unicamente|^obras/.test(ns);
     for (const [x, y, how] of pairsIn(s, generic)) {
       const A = resolvePlace(x), B = resolvePlace(y);
-      if (!A || !B || A.key === B.key) { res.unmatched.push(`${x} / ${y}`); continue; }
+      if (!A || !B || (A.key && A.key === B.key) || (A.st && A.st === B.st)) { res.unmatched.push(`${x} / ${y}`); continue; }
+      if (how === 'cadena' && (A.region || B.region)) continue;   // «Castilla-La Mancha», listas de regiones
       found.push({ A, B, how, operating, sev: SEV_CUT.test(ns) ? 'cut' : SEV_WARN.test(ns) ? 'warn' : itemSev });
       if (!operating && how === 'entre' && !A.region && !B.region) specific = true;
     }
