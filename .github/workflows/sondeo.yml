@@ -13,7 +13,7 @@ jobs:
         run: |
           npm i --no-save playwright@1.49.1 >/dev/null
           npx playwright install --with-deps chromium >/dev/null
-          cat > /tmp/p.mjs <<'JS'
+          cat > ./p.mjs <<'JS'
           import { chromium } from 'playwright';
           const b = await chromium.launch(); const p = await b.newPage();
           const xhr = [];
@@ -30,4 +30,4 @@ jobs:
           }
           await b.close();
           JS
-          node /tmp/p.mjs
+          node ./p.mjs
