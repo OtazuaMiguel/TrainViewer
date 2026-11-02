@@ -27,6 +27,15 @@ for (const [name, vp] of [['escritorio', { width: 1440, height: 900 }], ['movil'
     bodyText: document.body.innerText.match(/api.?key[^\n]{0,80}/i)?.[0] || null,
   }));
   log.push(`[${name}] ESTADO ${JSON.stringify(info)}`);
+  // Movimiento: cuántos trenes cambian de posición en 2 s
+  const tf = () => p.evaluate(() => [...document.querySelectorAll('.tmk')].map(e => e.style.transform));
+  const m1 = await tf(); await p.waitForTimeout(2000); const m2 = await tf();
+  log.push(`[${name}] MOVIMIENTO ${m1.filter((v, i) => v !== m2[i]).length}/${m1.length} trenes se han movido en 2 s · conexión: ${await p.$eval('#conn', e => e.innerText)}`);
+  // Ficha de tren: pulsa un tren visible
+  const pt = await p.evaluate(() => { const e = [...document.querySelectorAll('.tmk')].find(e => { const r = e.getBoundingClientRect(); return r.x > 420 && r.y > 80 && r.x < innerWidth - 60 && r.y < innerHeight - 60; }); if (!e) return null; const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
+  if (pt) { await p.mouse.click(pt[0], pt[1]); await p.waitForTimeout(2500);
+    log.push(`[${name}] FICHA ${(await p.$eval('#trainv', e => e.innerText)).replace(/\n+/g, ' | ').slice(0, 500)}`);
+    await p.screenshot({ path: `diag/${name}-tren.png` }); await p.keyboard.press('Escape'); await p.waitForTimeout(400); }
   await p.screenshot({ path: `diag/${name}.png` });
   // Panel de estación: busca Madrid y abre su panel
   await p.fill('#q', 'Madrid'); await p.waitForTimeout(400); await p.keyboard.press('Enter'); await p.waitForTimeout(2500);
