@@ -51,6 +51,7 @@ a{color:var(--info)}
 #results button:hover,#results button.hl{background:var(--panel-3)}
 #results small{color:var(--muted);margin-left:auto;font-size:11px;white-space:nowrap}
 #results .none{padding:10px 12px;color:var(--muted)}
+#results .res-h{padding:8px 11px 6px;font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;border-bottom:1px solid var(--line)}
 
 .tabs{display:flex;gap:2px;padding:0 10px;border-bottom:1px solid var(--line)}
 .tabs button{flex:1;background:none;border:0;padding:10px 4px 9px;color:var(--muted);font-weight:500;font-size:12.5px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;display:flex;justify-content:center;gap:6px;align-items:center}
@@ -315,6 +316,43 @@ body:not(.mode-sim) .sim-only{display:none!important}
 #toast.on{opacity:1;transform:translate(-50%,0)}
 .kpi b,.hero .big{transition:color .3s}
 
+/* ---------- Modo foco (tren seleccionado): resto del mapa en blanco y negro ---------- */
+#map .leaflet-tile-pane,#map .leaflet-base-pane,#map .leaflet-tracks-pane,#map .leaflet-incid-pane,#map .leaflet-stations-pane{transition:filter .45s ease,opacity .45s ease}
+#map.focus .leaflet-tile-pane{filter:grayscale(1) brightness(.6) contrast(1.05)}
+#map.focus .leaflet-base-pane{filter:grayscale(1) brightness(.75)}
+#map.focus .leaflet-tracks-pane,#map.focus .leaflet-incid-pane{filter:grayscale(1) brightness(.55)}
+#map.focus .leaflet-stations-pane{filter:grayscale(1);opacity:.4}
+#map.focus .tmk:not(.focused){filter:grayscale(1);opacity:.3}
+#map.focus .leaflet-tooltip.st-label:not(.st-focus){opacity:.22}
+#map .tmk{transition:opacity .4s ease,filter .4s ease}
+.leaflet-tooltip.st-focus{display:block!important;color:#fff;font-weight:600}
+.route-flow{animation:flow 1.2s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-24}}
+.trip-ring{animation:ring 1.8s ease-in-out infinite}
+@keyframes ring{50%{stroke-opacity:.35}}
+.off-row{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;width:100%;padding:8px 0;background:none;border:0;border-top:1px solid var(--line);text-align:left;cursor:pointer;color:var(--text)}
+.off-row:first-child{border-top:0}
+.off-row:hover .off-main b{color:#fff;text-decoration:underline;text-decoration-color:var(--line-2)}
+.off-row svg{color:var(--dim)}
+.off-main{min-width:0}
+.off-main b{display:block;font-size:12.5px;font-weight:500;line-height:1.3}
+.off-main small{display:block;color:var(--dim);font-size:11px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill.plan{color:#cbd5e1;background:rgba(148,163,184,.14)}
+.off-t{font-weight:600;font-size:13px;margin-bottom:3px}
+.off-z{font-size:11px;color:var(--muted);margin-bottom:8px}
+.off-x{font-size:12px;color:#c5cfdc;line-height:1.5}
+.off-cut{animation:dash 1.1s linear infinite}
+#spark svg{display:block;width:100%;height:auto}
+.wk-g{stroke:var(--line);stroke-width:1}
+.wk-gl{fill:var(--dim);font:500 8px var(--mono);text-anchor:end}
+.wk-d{stroke:var(--line-2);stroke-width:1;stroke-dasharray:2 3}
+.wk-line{fill:none;stroke:#22c55e;stroke-width:1.6;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.wk-area{fill:rgba(34,197,94,.1)}
+.wk-dot{fill:#22c55e}
+.wk-now{fill:#22c55e;stroke:#05080d;stroke-width:1.5}
+.wk-l{fill:var(--muted);font:500 8.5px Inter,sans-serif;text-anchor:middle}
+.wk-v{font:600 9px var(--mono);text-anchor:middle}
+.wk-v.ok{fill:#4ade80} .wk-v.warn{fill:#facc15} .wk-v.crit{fill:#f87171} .wk-v.na{fill:var(--dim)}
 @keyframes live{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}70%{box-shadow:0 0 0 7px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
 @keyframes blink{50%{opacity:.3}}
 @keyframes dash{to{stroke-dashoffset:-24}}
@@ -352,7 +390,7 @@ body:not(.mode-sim) .sim-only{display:none!important}
     </div>
     <div class="search">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="q" type="search" placeholder="Buscar estación o tren (p. ej. Sevilla, 03061)" autocomplete="off" aria-label="Buscar estación o tren">
+      <input id="q" type="search" placeholder="Estación, tren o viaje (Sevilla · 03061 · Madrid Barcelona)" autocomplete="off" aria-label="Buscar estación o tren">
       <div id="results" role="listbox"></div>
     </div>
   </div>
@@ -386,8 +424,8 @@ body:not(.mode-sim) .sim-only{display:none!important}
         </div>
       </div>
       <div class="sec">
-        <div class="sec-title">Puntualidad <span>últimos 30 min</span></div>
-        <div id="spark"><div class="spark-empty">Se irá dibujando con los datos de los próximos minutos</div></div>
+        <div class="sec-title">Puntualidad · últimos 7 días <span id="wk-avg"></span></div>
+        <div id="spark"><div class="spark-empty">Cargando histórico…</div></div>
       </div>
       <div class="sec">
         <div class="sec-title">Retrasos <span id="d-note">trenes en circulación</span></div>
@@ -408,6 +446,10 @@ body:not(.mode-sim) .sim-only{display:none!important}
           <span><i style="background:var(--crit)"></i>Interrumpido<b id="nl-cut">0</b></span>
           <span style="color:var(--dim)" id="net-mode">km</span>
         </div>
+      </div>
+      <div class="sec">
+        <div class="sec-title">Avisos oficiales de Adif <span id="off-upd"></span></div>
+        <div id="offlist"><div class="spark-empty">Cargando…</div></div>
       </div>
       <div class="sec">
         <div class="sec-title">Mostrar en el mapa</div>
@@ -492,6 +534,8 @@ const CFG = {
   RUTAS: 'https://tiempo-real.largorecorrido.renfe.com/renfe-visor/trenesConEstacionesLD.json',
   // Proxy propio en Supabase (Edge Function «renfe-proxy»): añade CORS a los datos de Renfe
   SUPABASE_PROXY: 'https://dyxrgskqftlxetcgoebp.supabase.co/functions/v1/renfe-proxy',
+  // Histórico e incidencias oficiales que publica el flujo «datos» cada ~15 min
+  DATA_BASE: 'https://raw.githubusercontent.com/Paticuaker/TrainViewer/datos/',
   FEED_PERIOD_MS: 15000,   // Renfe publica una actualización nueva cada ~15 s (medido)
   POLL_MS: 15000, ROUTES_MS: 120000, RETRY_MS: 30000, TIMEOUT_MS: 10000,
   PUBLIC_PROXIES: [
@@ -775,12 +819,13 @@ map.fitBounds([[36.0,-9.3],[43.8,3.3]], {padding:[10,10]});
 L.control.zoom({position:'topright'}).addTo(map);
 map.createPane('base').style.zIndex = 150;
 map.createPane('tracks').style.zIndex = 410;
+map.createPane('incid').style.zIndex = 415;
 map.createPane('route').style.zIndex = 420;
 map.createPane('stations').style.zIndex = 450;
 map.createPane('trains').style.zIndex = 620;
 // Los paneles propios no capturan el ratón: sólo lo hacen sus elementos interactivos
 // (si no, la capa superior tapa los clics de estaciones y vías).
-for (const p of ['base','tracks','route','stations','trains']) map.getPane(p).style.pointerEvents = 'none';
+for (const p of ['base','tracks','incid','route','stations','trains']) map.getPane(p).style.pointerEvents = 'none';
 
 // Mapa base integrado (siempre visible; las teselas se superponen si cargan)
 if (EMBED) {
@@ -867,10 +912,13 @@ function renderLegend() {
   $('legend').innerHTML = `
     <button class="lt-btn" aria-label="Mostrar u ocultar la leyenda"><span>Leyenda</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 15 6-6 6 6"/></svg></button>
     <div class="lg-body">
-    <div class="lt">Estado de vía${live ? ' · inferido' : ''}</div>
+    <div class="lt">Estado de vía</div>
     <div class="r"><i class="ln" style="background:var(--ok)"></i>Circulación normal</div>
-    <div class="r"><i class="ln" style="background:var(--warn)"></i>${live ? 'Retrasos en el tramo' : 'Precaución · velocidad reducida'}</div>
-    <div class="r"><i class="ln dash"></i>${live ? 'Tren detenido en plena vía' : 'Tramo cortado'}</div>
+    ${live ? `<div class="r"><i class="ln dash"></i>Corte oficial (Adif)</div>
+    <div class="r"><i class="ln" style="background:var(--warn)"></i>Incidencia o retrasos</div>
+    <div class="r"><i class="ln" style="background:repeating-linear-gradient(90deg,var(--warn) 0 2px,transparent 2px 7px)"></i>Corte programado otro día</div>`
+    : `<div class="r"><i class="ln" style="background:var(--warn)"></i>Precaución · velocidad reducida</div>
+    <div class="r"><i class="ln dash"></i>Tramo cortado</div>`}
     <div class="r"><i class="ln" style="height:1.5px;background:#4a5d78"></i>Otras líneas (sin estado)</div>
     <div class="s"></div>
     <div class="lt">Trenes</div>
@@ -907,7 +955,7 @@ function createMarker(t) {
   t.marker = new SmoothMarker(t.pos, {icon:ICONS[t.cat], pane:'trains', keyboard:false, bubblingMouseEvents:false});
   t.marker.bindTooltip(() => trainTip(t), {className:'ttip', direction:'top', offset:[0, -10], opacity:1});
   t.marker.on('click', () => selectTrain(t));
-  t.marker.on('add', () => { const el = t.marker.getElement(); t.dotEl = el.firstChild; t.hdEl = el.querySelector('.hd'); t.styleKey = null; t.lastAng = null; styleTrain(t); });
+  t.marker.on('add', () => { const el = t.marker.getElement(); t.dotEl = el.firstChild; t.hdEl = el.querySelector('.hd'); t.styleKey = null; t.lastAng = null; if (state.selected === t) el.classList.add('focused'); styleTrain(t); });
   t.hdRef = t.pos; t.ang = null;
   groups[t.cat].addLayer(t.marker);
 }
@@ -928,34 +976,137 @@ function removeTrain(t) {
 function clearTrains() { for (const t of [...trains.values()]) removeTrain(t); }
 
 function routePathOf(t) { return state.mode === 'live' ? liveRoutePath(t) : simRoutePath(t); }
-function selectTrain(t) {
+function selectTrain(t, trip) {
   if (state.selected && state.selected !== t) deselect();
-  state.selected = t;
-  const path = routePathOf(t);
-  if (path && path.length > 1) {
-    routeLayer = L.layerGroup([
-      L.polyline(path, {pane:'route', color:CAT_COLOR[t.cat], weight:6, opacity:.18, lineCap:'round', interactive:false}),
-      L.polyline(path, {pane:'route', color:'#ffffff', weight:2, opacity:.85, dashArray:'1 6', lineCap:'round', interactive:false}),
-      L.circleMarker(path[0], {pane:'route', radius:6, color:'#fff', weight:1.5, fill:false, opacity:.7, interactive:false}),
-      L.circleMarker(path[path.length - 1], {pane:'route', radius:7, color:'#fff', weight:2.5, fill:false, interactive:false}),
-    ]).addTo(map);
-  }
+  state.selected = t; state.trip = trip || null;
+  drawFocus(t, trip);
   styleTrain(t);
   showView('train');
   renderTrainView(true);
 }
 function deselect() {
-  const t = state.selected; state.selected = null; state.follow = false;
-  if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+  const t = state.selected; state.selected = null; state.follow = false; state.trip = null;
+  clearFocus(t);
   if (t) styleTrain(t);
 }
+// ---------- Trazado real del recorrido (por las vías dibujadas) ----------
+// Grafo de todas las líneas (principales y secundarias) para unir las estaciones del recorrido por la vía real
+let RG = null;
+function buildRouteGraph() {
+  const nodes = [], adj = [], key = new Map(), grid = new Map(), G = 0.05;
+  const nid = p => { const k = p[0].toFixed(4) + ',' + p[1].toFixed(4); let i = key.get(k); if (i === undefined) { i = nodes.length; key.set(k, i); nodes.push(p); adj.push([]); const g = Math.floor(p[0] / G) + ':' + Math.floor(p[1] / G); (grid.get(g) || grid.set(g, []).get(g)).push(i); } return i; };
+  const link = (a, b) => { if (a === b) return; const d = hav(nodes[a], nodes[b]); adj[a].push([b, d]); adj[b].push([a, d]); };
+  const ends = [];
+  for (const g of [...EDGES.map(e => e.geom), ...SEC.map(l => l.geom)]) {
+    let prev = -1;
+    for (const p of g) { const i = nid(p); if (prev >= 0) link(prev, i); prev = i; }
+    ends.push(nid(g[0]), nid(g[g.length - 1]));
+  }
+  const near = (p, maxD, skip) => {
+    let best = -1, bd = maxD; const a = Math.floor(p[0] / G), b = Math.floor(p[1] / G);
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const n of grid.get((a + i) + ':' + (b + j)) || []) { if (skip && skip.has(n)) continue; const d = hav(p, nodes[n]); if (d < bd) { bd = d; best = n; } }
+    return best;
+  };
+  for (const e of ends) { const skip = new Set([e, ...adj[e].map(x => x[0])]); const n = near(nodes[e], 2500, skip); if (n >= 0) link(e, n); }
+  return {nodes, adj, near};
+}
+function graphPath(a, b) {        // A* entre dos nodos
+  const {nodes, adj} = RG, goal = nodes[b];
+  const g = new Map([[a, 0]]), prev = new Map(), open = [[hav(nodes[a], goal), a]], done = new Set();
+  const push = x => { open.push(x); let i = open.length - 1; while (i > 0) { const q = (i - 1) >> 1; if (open[q][0] <= open[i][0]) break; [open[q], open[i]] = [open[i], open[q]]; i = q; } };
+  const pop = () => { const top = open[0], last = open.pop(); if (open.length) { open[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < open.length && open[l][0] < open[m][0]) m = l; if (r < open.length && open[r][0] < open[m][0]) m = r; if (m === i) break; [open[m], open[i]] = [open[i], open[m]]; i = m; } } return top; };
+  let steps = 0;
+  while (open.length && steps++ < 60000) {
+    const [, u] = pop(); if (done.has(u)) continue; if (u === b) break; done.add(u);
+    for (const [v, w] of adj[u]) { const nd = g.get(u) + w; if (nd < (g.get(v) ?? Infinity)) { g.set(v, nd); prev.set(v, u); push([nd + hav(nodes[v], goal), v]); } }
+  }
+  if (!g.has(b)) return null;
+  const out = []; for (let u = b; u !== undefined; u = prev.get(u)) { out.push(nodes[u]); if (u === a) break; }
+  return {coords:out.reverse(), len:g.get(b)};
+}
+const trackCache = new Map();
+// Convierte la lista de estaciones de un recorrido en una línea que sigue las vías
+function trackPath(points, cacheKey) {
+  if (cacheKey && trackCache.has(cacheKey)) return trackCache.get(cacheKey);
+  if (!RG) RG = buildRouteGraph();
+  const out = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    const p = points[i], q = points[i + 1], straight = hav(p, q);
+    let seg = null;
+    if (straight > 300) {
+      const a = RG.near(p, 6000), b = RG.near(q, 6000);
+      if (a >= 0 && b >= 0 && a !== b) { const r = graphPath(a, b); if (r && r.len < straight * 2.5 + 8000) seg = r.coords; }
+    }
+    const part = seg ? [p, ...seg, q] : [p, q];
+    out.push(...(out.length ? part.slice(1) : part));
+  }
+  if (cacheKey) trackCache.set(cacheKey, out);
+  return out;
+}
+function liveRoutePath(t) {
+  const r = live.routes.get(t.id);
+  if (!r) return null;
+  const pts = r.path.length > 1 ? r.path : r.stops.map(s => CODE2ST.get(s.code)?.c || CAT.get(s.code)?.c).filter(Boolean);
+  return pts.length > 1 ? trackPath(pts, 'L' + t.id + ':' + pts.length) : null;
+}
+function routeStopsOf(t) {
+  if (t.src === 'sim') { const T = SIM[t.type], r = t.route, last = r.path.length - 1; return r.path.filter((c, k) => k === 0 || k === last || T.stopAt(c)).map(c => ({name:ST[c].n, c:ST[c].c})); }
+  const r = live.routes.get(t.id); if (!r) return [];
+  return r.stops.map(s => { const st = CODE2ST.get(s.code), cs = CAT.get(s.code); const c = st ? st.c : cs ? cs.c : null; return c ? {name:exactName(s.code), c} : null; }).filter(Boolean);
+}
+
+// ---------- Modo foco: sólo el trayecto del tren seleccionado en color ----------
+function splitAt(path, pos) {
+  let bi = 0, bd = Infinity;
+  for (let i = 0; i < path.length; i++) { const d = (path[i][0] - pos[0]) ** 2 + (path[i][1] - pos[1]) ** 2; if (d < bd) { bd = d; bi = i; } }
+  return [path.slice(0, bi + 1).concat([pos]), [pos].concat(path.slice(bi + 1))];
+}
+function drawFocus(t, trip) {
+  if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+  const path = routePathOf(t), c = CAT_COLOR[t.cat];
+  const layers = [];
+  if (path && path.length > 1) {
+    const [done, ahead] = splitAt(path, t.pos);
+    t.focusPath = path;
+    layers.push(
+      L.polyline(path, {pane:'route', color:'#03060b', weight:11, opacity:.9, lineCap:'round', lineJoin:'round', interactive:false}),
+      L.polyline(ahead, {pane:'route', color:c, weight:18, opacity:.22, lineCap:'round', lineJoin:'round', interactive:false, className:'route-glow'}),
+      t.focusDone = L.polyline(done, {pane:'route', color:c, weight:5, opacity:.45, lineCap:'round', lineJoin:'round', interactive:false}),
+      t.focusAhead = L.polyline(ahead, {pane:'route', color:c, weight:6, opacity:1, lineCap:'round', lineJoin:'round', interactive:false}),
+      L.polyline(ahead, {pane:'route', color:'#ffffff', weight:1.6, opacity:.75, dashArray:'2 10', lineCap:'round', interactive:false, className:'route-flow'}),
+    );
+  }
+  const stops = routeStopsOf(t);
+  stops.forEach((s, i) => {
+    const end = i === 0 || i === stops.length - 1;
+    layers.push(L.circleMarker(s.c, {pane:'route', radius:end ? 6.5 : 4.5, color:end ? '#fff' : c, weight:end ? 2.5 : 2, fillColor:'#05080d', fillOpacity:1, interactive:false})
+      .bindTooltip(esc(s.name), {permanent:true, direction:'right', offset:[6, 0], className:'st-label st-focus' + (end ? ' st-major' : '')}));
+  });
+  if (trip) for (const st of [trip.from, trip.to]) layers.push(L.circleMarker(st.c, {pane:'route', radius:11, color:'#fff', weight:2, fill:false, interactive:false, className:'trip-ring'}));
+  routeLayer = L.layerGroup(layers).addTo(map);
+  mapEl.classList.add('focus');
+  const el = t.marker.getElement(); if (el) el.classList.add('focused');
+}
+function updateFocusSplit() {
+  const t = state.selected; if (!t || !t.focusPath || !t.focusAhead) return;
+  const [done, ahead] = splitAt(t.focusPath, t.pos);
+  t.focusDone.setLatLngs(done); t.focusAhead.setLatLngs(ahead);
+}
+function clearFocus(t) {
+  mapEl.classList.remove('focus');
+  if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+  if (t) { const el = t.marker.getElement(); if (el) el.classList.remove('focused'); t.focusPath = t.focusDone = t.focusAhead = null; }
+}
+
 function closeTrain() { deselect(); showView(state.station ? 'station' : state.tab); if (state.station) renderStation(); }
-function focusTrain(t) {
+function focusTrain(t, trip) {
   if (!t || !trains.has(t.id)) { toast('Ese tren ya no está en circulación'); return; }
   const cb = document.querySelector(`input[data-cat="${t.cat}"]`);
   if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
-  map.flyTo(t.pos, Math.max(map.getZoom(), 9), {duration:.9});
-  selectTrain(t);
+  selectTrain(t, trip);
+  const p = t.focusPath;
+  if (p && p.length > 1) map.flyToBounds(L.latLngBounds(p).extend(t.pos), {padding:[40, 40], maxZoom:10, duration:.9});
+  else map.flyTo(t.pos, Math.max(map.getZoom(), 9), {duration:.9});
 }
 
 // Ficha del tren en la barra lateral: datos principales y recorrido completo con horas
@@ -1264,11 +1415,17 @@ function inferNetworkState(first) {
     } else if (ts.length && (max >= 20 || avg >= 10)) {
       status = 'warn'; cause = `Retraso medio +${Math.round(avg)} min en ${ts.length} ${ts.length === 1 ? 'tren' : 'trenes'} (máx. +${max})`;
     }
+    const off = official.edges[e.id];
+    if (off && off.frac >= 0.5) {               // lo oficial (Adif) manda sobre lo deducido
+      const it = official.items.find(i => i.id === off.item);
+      status = off.sev; cause = 'Adif: ' + (it ? it.title : 'incidencia oficial');
+    }
     if (status !== e.status) {
       const prev = e.status;
       setEdge(e, status, cause, 0);
       if (!first) {
-        if (status === 'cut') addLog('crit', `Tren detenido · ${e.name}`, cause, {edge:e});
+        if (off && off.frac >= 0.5) { /* ya registrado como aviso oficial */ }
+        else if (status === 'cut') addLog('crit', `Tren detenido · ${e.name}`, cause, {edge:e});
         else if (status === 'warn' && prev === 'ok') addLog('warn', `Retrasos · ${e.name}`, cause, {edge:e});
         else if (status === 'ok') addLog('ok', `Circulación normalizada · ${e.name}`, 'Sin retrasos significativos en el tramo', {edge:e});
       }
@@ -1276,12 +1433,6 @@ function inferNetworkState(first) {
   }
 }
 
-function liveRoutePath(t) {
-  const r = live.routes.get(t.id);
-  if (r && r.path.length > 1) return r.path;
-  if (r && r.stops.length > 1) return r.stops.map(s => CODE2ST.get(s.code)?.c || CAT.get(s.code)?.c).filter(Boolean);
-  return null;
-}
 function liveView(t) {
   const r = live.routes.get(t.id), now = Date.now();
   let pct = 50, stops = [];
@@ -1516,6 +1667,7 @@ function startSim() {
    ===================================================================== */
 function setMode(m) {
   state.mode = m;
+  if (m === 'live') { if (!map.hasLayer(official.layer)) official.layer.addTo(map); } else if (map.hasLayer(official.layer)) map.removeLayer(official.layer);
   document.body.className = 'mode-' + m;
   const fr = $('flt-fr');
   fr.classList.toggle('disabled', m === 'live');
@@ -1649,6 +1801,7 @@ function addLog(level, title, detail, ref) {
   li.innerHTML = `<time>${fmtHM(nowMs())}</time><div><div class="t">${esc(title)}</div><div class="dd">${esc(detail)}</div></div>`;
   if (ref && ref.edge) li.onclick = () => focusEdge(ref.edge);
   if (ref && ref.train) li.onclick = () => focusTrain(ref.train);
+  if (ref && ref.official) li.onclick = () => focusOfficial(ref.official);
   logEl.prepend(li);
   while (logEl.children.length > 120) logEl.lastChild.remove();
   $('l-cnt').textContent = ++logTotal;
@@ -1679,11 +1832,65 @@ function renderTrainList() {
 }
 $('tq').oninput = renderTrainList; $('tsort').onchange = renderTrainList;
 
-// Búsqueda global
+// Búsqueda global: estaciones, trenes y viajes («Madrid Sevilla», «Madrid → Barcelona»)
 const qEl = $('q'), resEl = $('results'); let results = [], hl = 0;
+const fold = s => s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').trim();
+function matchStation(q) {
+  const f = fold(q); if (f.length < 3) return null;
+  const all = [...STATIONS.values()].filter(s => !s.junction);
+  return all.find(s => fold(s.name) === f) || all.filter(s => fold(s.name).startsWith(f)).sort((a, b) => (b.major - a.major) || (b.net - a.net))[0]
+      || all.filter(s => fold(s.name).includes(f)).sort((a, b) => (b.major - a.major) || (b.net - a.net))[0] || null;
+}
+function parseTrip(q) {
+  const whole = matchStation(q);
+  if (whole && fold(whole.name).startsWith(fold(q))) return null;      // «San Sebastián» es una estación, no un viaje
+  const parts = q.split(/\s*(?:→|->|>|–|—|\s-\s|\sa\s|\shasta\s|\sto\s)\s*/i).filter(Boolean);
+  if (parts.length === 2) { const A = matchStation(parts[0]), B = matchStation(parts[1]); if (A && B && A !== B) return {from:A, to:B}; }
+  const w = q.trim().split(/\s+/);
+  for (let i = 1; i < w.length; i++) {
+    const l = w.slice(0, i).join(' '), r = w.slice(i).join(' ');
+    if (l.length < 4 || r.length < 4) continue;
+    const A = matchStation(l), B = matchStation(r); if (A && B && A !== B) return {from:A, to:B};
+  }
+  return null;
+}
+// Trenes en circulación que hacen el viaje A -> B (paran en A antes que en B)
+function tripsFor(A, B) {
+  const now = nowMs(), out = [];
+  if (state.mode === 'sim') {
+    for (const t of trains.values()) {
+      if (t.type === 'fr') continue;
+      const p = t.route.path, i = p.indexOf(A.id), j = p.indexOf(B.id), T = SIM[t.type];
+      if (i < 0 || j <= i || (i > 0 && !T.stopAt(A.id)) || (j < p.length - 1 && !T.stopAt(B.id))) continue;
+      const up = new Map(simUpcoming(t).map(u => [u.k, u])); const ub = up.get(j); if (!ub) continue;
+      const ua = up.get(i);
+      out.push({t, dep:ua ? (ua.depEst || ua.arrEst) : null, arr:ub.arrEst, delay:t.delay});
+    }
+  } else if (state.mode === 'live') {
+    for (const [id, r] of live.routes) {
+      const t = trains.get(id); if (!t) continue;
+      const i = r.stops.findIndex(s => A.codes.has(s.code)), j = r.stops.findIndex(s => B.codes.has(s.code));
+      if (i < 0 || j <= i) continue;
+      const arr = parseTime(r.stops[j].time, now); if (!arr || arr + t.delay * 60000 < now) continue;
+      out.push({t, dep:parseTime(r.stops[i].dep, now), arr, delay:t.delay});
+    }
+  }
+  return out.sort((a, b) => (a.dep || a.arr) - (b.dep || b.arr)).slice(0, 8);
+}
 function doSearch() {
   const q = qEl.value.trim().toLowerCase();
   if (!q) { resEl.classList.remove('open'); return; }
+  const trip = q.length >= 7 ? parseTrip(q) : null;
+  if (trip) {
+    const list = tripsFor(trip.from, trip.to);
+    results = list.map(x => ({kind:'trip', t:x.t, trip}));
+    hl = 0;
+    resEl.innerHTML = `<div class="res-h">Viajes ${esc(trip.from.name)} → ${esc(trip.to.name)}</div>` + (list.length ? list.map((x, i) => `<button data-i="${i}" class="${i === hl ? 'hl' : ''}"><i style="width:9px;height:9px;border-radius:50%;background:${CAT_COLOR[x.t.cat]}"></i>${esc(x.t.label)} ${esc(x.t.number)}<small>${x.dep ? fmtHM(x.dep) : '—'} → ${fmtHM(x.arr)}${x.delay > 0 ? ` <b class="c-${delayClass(x.delay)}">+${x.delay}′</b>` : ''}</small></button>`).join('')
+      : `<div class="none">Ahora no circula ningún tren de ${esc(trip.from.name)} a ${esc(trip.to.name)}.</div>`);
+    resEl.classList.add('open');
+    resEl.querySelectorAll('button').forEach(b => b.onmousedown = ev => { ev.preventDefault(); choose(+b.dataset.i); });
+    return;
+  }
   const nq = q.normalize('NFD').replace(/\p{Diacritic}/gu, '');
   const stn = [...STATIONS.values()].filter(s => !s.junction && s.name.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').includes(nq))
     .sort((a, b) => (b.major - a.major) || (b.net - a.net) || a.name.localeCompare(b.name)).slice(0, 5).map(s => ({kind:'st', s}));
@@ -1699,7 +1906,9 @@ function doSearch() {
 function choose(i) {
   const r = results[i]; if (!r) return;
   qEl.value = ''; resEl.classList.remove('open'); qEl.blur();
-  if (r.kind === 'st') { map.flyTo(r.s.c, Math.max(map.getZoom(), 9), {duration:.8}); openStation(r.s, false); } else focusTrain(r.t);
+  if (r.kind === 'st') { map.flyTo(r.s.c, Math.max(map.getZoom(), 9), {duration:.8}); openStation(r.s, false); }
+  else if (r.kind === 'trip') focusTrain(r.t, r.trip);
+  else focusTrain(r.t);
 }
 qEl.oninput = doSearch;
 qEl.onkeydown = e => {
@@ -1766,14 +1975,117 @@ function updateDashboard() {
   $('k-delay').innerHTML = n ? `${(sum / n).toFixed(1).replace('.', ',')}<em>min</em>` : '–';
   buckets.forEach((v, i) => { $('db-' + i).style.width = (n ? v / n * 100 : 0) + '%'; $('dl-' + i).textContent = v; });
   const km = {ok:0, warn:0, cut:0};
-  for (const e of EDGES) km[e.status] += e.len / 1000;
-  const inc = EDGES.filter(e => e.status !== 'ok').length;
-  $('k-inc').textContent = inc; $('k-inc').classList.toggle('has', EDGES.some(e => e.status === 'cut'));
+  let inc;
+  if (state.mode === 'live') {
+    // Oficial: longitud exacta de los tramos afectados; deducido: tramos sin aviso oficial
+    for (const e of EDGES) if (!official.edges[e.id] && e.status !== 'ok') km[e.status] += e.len / 1000;
+    km.cut += official.km.cut; km.warn += official.km.warn;
+    km.ok = Math.max(0, TOTAL_KM - km.cut - km.warn);
+    inc = official.items.filter(i => (i.severity === 'cut' || i.severity === 'warn') && i.edges.length).length + EDGES.filter(e => e.status !== 'ok' && !official.edges[e.id]).length;
+  } else {
+    for (const e of EDGES) km[e.status] += e.len / 1000;
+    inc = EDGES.filter(e => e.status !== 'ok').length;
+  }
+  $('k-inc').textContent = inc; $('k-inc').classList.toggle('has', EDGES.some(e => e.status === 'cut') || (state.mode === 'live' && official.km.cut > 0));
   for (const s in km) { $('nb-' + s).style.width = (km[s] / TOTAL_KM * 100) + '%'; $('nl-' + s).textContent = nf.format(Math.round(km[s])) + ' km'; }
   $('net-total').textContent = nf.format(Math.round(TOTAL_KM)) + ' km';
   updateConn();
-  if (state.view === 'train' && state.selected) renderTrainView();
+  if (state.view === 'train' && state.selected) { renderTrainView(); updateFocusSplit(); }
   pushHistory(n ? onTime / n * 100 : null, n ? sum / n : null);
+}
+
+/* =====================================================================
+   10b. DATOS RECOGIDOS CADA 15 MIN (GitHub Actions, rama «datos»):
+        histórico de puntualidad (7 días) e incidencias oficiales de Adif
+   ===================================================================== */
+const serverHist = {samples:[], updated:null};
+const official = {updated:null, items:[], overlays:[], edges:{}, layer:L.layerGroup(), seen:new Set(), km:{cut:0, warn:0}};
+const SEV_LABEL = {cut:'Corte', warn:'Precaución', plan:'Programado', info:'Aviso', ok:'Restablecido'};
+const SEV_CLASS = {cut:'crit', warn:'warn', plan:'plan', info:'', ok:'ok'};
+async function loadDatos() {
+  const bust = '?t=' + Math.floor(Date.now() / 120000);
+  const get = f => fetchJSON(CFG.DATA_BASE + f + bust).catch(() => fetchJSON('data/' + f + bust));
+  try { const h = await get('historico.json'); serverHist.samples = (h.samples || []).filter(s => s && s.t && s.p !== null); serverHist.updated = h.updated; } catch {}
+  renderWeek();
+  try { applyOfficial(await get('incidencias.json')); } catch { $('off-upd').textContent = 'sin datos'; }
+}
+function officialHTML(it) {
+  return `<div class="pp">
+    <div class="pp-head"><span class="pp-badge" style="--c:${it.severity === 'cut' ? COLOR.cut : it.severity === 'warn' ? COLOR.warn : '#94a3b8'}">${SEV_LABEL[it.severity] || 'Aviso'}</span><span class="pp-title">Adif</span></div>
+    <div class="off-t">${esc(it.title)}</div>
+    <div class="off-z">${esc(it.zones || '')}</div>
+    <div class="off-x">${esc((it.text || '').slice(0, 520))}${(it.text || '').length > 520 ? '…' : ''}</div>
+    ${it.note ? `<div class="pp-foot">${esc(it.note)}</div>` : ''}
+    <div class="pp-foot">Fuente oficial · actualizado ${official.updated ? fmtHM(Date.parse(official.updated)) : '—'} · <a href="${esc(it.url || 'https://www.adif.es/viajeros/estado-de-la-red')}" target="_blank" rel="noopener">ver en Adif</a></div></div>`;
+}
+function applyOfficial(d) {
+  official.updated = d.updated; official.items = d.items || []; official.overlays = d.overlays || []; official.edges = d.edges || {};
+  official.layer.clearLayers(); official.km = {cut:0, warn:0};
+  const byId = new Map(official.items.map(i => [i.id, i]));
+  for (const o of official.overlays) {
+    const it = byId.get(o.item); if (!it || !o.coords || o.coords.length < 2) continue;
+    let len = 0; for (let i = 1; i < o.coords.length; i++) len += hav(o.coords[i - 1], o.coords[i]);
+    if (o.sev === 'cut' || o.sev === 'warn') official.km[o.sev] += len / 1000;
+    const col = o.sev === 'cut' ? COLOR.cut : COLOR.warn, plan = o.sev === 'plan';
+    official.layer.addLayer(L.polyline(o.coords, {pane:'incid', color:'#03060b', weight:plan ? 4 : 8, opacity:.85, interactive:false}));
+    official.layer.addLayer(L.polyline(o.coords, {pane:'incid', color:col, weight:plan ? 2 : 4.5, opacity:plan ? .8 : 1, dashArray:plan ? '2 7' : (o.sev === 'cut' ? '7 6' : null),
+      className:o.sev === 'cut' ? 'off-cut' : '', lineCap:'round', bubblingMouseEvents:false}).bindPopup(() => officialHTML(it), {className:'dark-popup', minWidth:290, maxWidth:300}));
+  }
+  if (state.mode === 'live' && !map.hasLayer(official.layer)) official.layer.addTo(map);
+  for (const it of official.items) {
+    if ((it.severity === 'cut' || it.severity === 'warn') && !official.seen.has(it.id + it.severity)) {
+      official.seen.add(it.id + it.severity);
+      addLog(it.severity === 'cut' ? 'crit' : 'warn', `Adif · ${it.title}`, it.edges.length ? (it.zones || '') : (it.note || it.zones || ''), {official:it});
+    }
+  }
+  renderOfficialList();
+  if (state.mode === 'live') inferNetworkState(true);
+  updateDashboard();
+}
+function focusOfficial(it) {
+  const parts = official.overlays.filter(o => o.item === it.id);
+  if (!parts.length) { if (it.url) window.open(it.url, '_blank', 'noopener'); return; }
+  const b = L.latLngBounds(parts.flatMap(o => o.coords));
+  map.flyToBounds(b, {padding:[60, 60], maxZoom:10, duration:.8});
+  map.once('moveend', () => L.popup({className:'dark-popup', minWidth:290, maxWidth:300}).setLatLng(parts[0].coords[Math.floor(parts[0].coords.length / 2)]).setContent(officialHTML(it)).openOn(map));
+}
+function renderOfficialList() {
+  const order = {cut:0, warn:1, plan:2, info:3, ok:4};
+  const list = [...official.items].filter(i => i.severity !== 'ok').sort((a, b) => order[a.severity] - order[b.severity] || (b.edges.length - a.edges.length));
+  $('off-upd').textContent = official.updated ? 'actualizado ' + fmtHM(Date.parse(official.updated)) : '';
+  $('offlist').innerHTML = list.length ? list.map((it, i) => `<button class="off-row" data-i="${i}">
+      <span class="pill ${SEV_CLASS[it.severity]}">${SEV_LABEL[it.severity]}</span>
+      <span class="off-main"><b>${esc(it.title)}</b><small>${esc(it.edges.length ? (it.zones || '') : (it.note || it.zones || ''))}</small></span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="${it.edges.length ? 'm9 18 6-6-6-6' : 'M7 17 17 7M8 7h9v9'}"/></svg></button>`).join('')
+    : '<div class="spark-empty">Adif no informa de incidencias ahora mismo.</div>';
+  $('offlist').querySelectorAll('.off-row').forEach(b => b.onclick = () => focusOfficial(list[+b.dataset.i]));
+}
+
+// Gráfica de puntualidad de los últimos 7 días (muestras del servidor + las de esta sesión)
+function weekSamples() {
+  const srv = serverHist.samples, lastSrv = srv.length ? srv[srv.length - 1].t : 0;
+  return [...srv.map(s => ({t:s.t, p:s.p})), ...punctHist.filter(h => h.t > lastSrv + 60000)];
+}
+function renderWeek() {
+  const el = $('spark'); if (!el) return;
+  const S = weekSamples().filter(s => s.t > Date.now() - 7 * 864e5).sort((a, b) => a.t - b.t);
+  const now = Date.now(), tp = madridParts(now), day0 = madridTime(tp.year, tp.month - 1, tp.day, 0, 0) - 6 * 864e5, span = now - day0;
+  const W = 320, top = 8, H = 64, x = t => (t - day0) / span * W, y = p => top + (1 - p / 100) * H;
+  const days = []; for (let i = 0; i < 7; i++) { const a = day0 + i * 864e5, b = a + 864e5, ss = S.filter(s => s.t >= a && s.t < b); days.push({a, b, avg:ss.length ? ss.reduce((m, s) => m + s.p, 0) / ss.length : null, n:ss.length}); }
+  const fmtDay = ms => new Date(ms + 12 * 3600e3).toLocaleDateString('es-ES', {weekday:'short', day:'numeric', timeZone:TZ}).replace('.', '');
+  let paths = [], cur = [];
+  S.forEach((s, i) => { if (i && s.t - S[i - 1].t > 2 * 3600e3) { paths.push(cur); cur = []; } cur.push(`${x(s.t).toFixed(1)},${y(s.p).toFixed(1)}`); });
+  if (cur.length) paths.push(cur);
+  const avg = S.length ? S.reduce((m, s) => m + s.p, 0) / S.length : null;
+  $('wk-avg').textContent = avg !== null ? `media ${Math.round(avg)} %` : '';
+  const grid = [25, 50, 75].map(p => `<line x1="0" x2="${W}" y1="${y(p)}" y2="${y(p)}" class="wk-g"/><text x="${W - 2}" y="${y(p) - 2}" class="wk-gl">${p}%</text>`).join('');
+  const sep = days.map(d => `<line x1="${x(d.a).toFixed(1)}" x2="${x(d.a).toFixed(1)}" y1="${top}" y2="${top + H}" class="wk-d"/>`).join('');
+  const labels = days.map(d => { const cx = x(Math.min(d.b, now) / 2 + d.a / 2); return `<text x="${cx.toFixed(1)}" y="${top + H + 12}" class="wk-l">${fmtDay(d.a)}</text><text x="${cx.toFixed(1)}" y="${top + H + 24}" class="wk-v ${d.avg === null ? 'na' : d.avg >= 80 ? 'ok' : d.avg >= 60 ? 'warn' : 'crit'}">${d.avg === null ? '–' : Math.round(d.avg) + '%'}</text>`; }).join('');
+  const lines = paths.map(pts => pts.length > 1 ? `<polyline points="${pts.join(' ')}" class="wk-line"/>` : `<circle cx="${pts[0].split(',')[0]}" cy="${pts[0].split(',')[1]}" r="2" class="wk-dot"/>`).join('');
+  const area = paths.filter(p => p.length > 1).map(pts => `<polygon points="${pts[0].split(',')[0]},${top + H} ${pts.join(' ')} ${pts[pts.length - 1].split(',')[0]},${top + H}" class="wk-area"/>`).join('');
+  const last = S[S.length - 1];
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${top + H + 28}" aria-label="Puntualidad de los últimos 7 días">${grid}${sep}${area}${lines}${last ? `<circle cx="${x(last.t).toFixed(1)}" cy="${y(last.p).toFixed(1)}" r="3.2" class="wk-now"/>` : ''}${labels}</svg>
+    <div class="spark-ax">${S.length ? `<span>${S.length} muestras · desde ${new Date(S[0].t).toLocaleDateString('es-ES', {day:'numeric', month:'short', timeZone:TZ})} ${fmtHM(S[0].t)}</span><span>${last ? Math.round(last.p) + ' % ahora' : ''}</span>` : '<span>Recogiendo datos: la gráfica se irá completando a lo largo de la semana</span>'}</div>`;
 }
 
 /* =====================================================================
@@ -1838,24 +2150,12 @@ document.addEventListener('keydown', e => {
 const punctHist = [];
 let lastHist = 0;
 function pushHistory(punct, delay) {
-  if (punct === null || Date.now() - lastHist < 30000) return;
+  if (state.mode !== 'live' || punct === null || Date.now() - lastHist < 60000) return;   // sólo datos reales
   lastHist = Date.now();
-  punctHist.push({t:nowMs(), p:punct, d:delay});
-  while (punctHist.length > 60) punctHist.shift();
-  renderSpark();
+  punctHist.push({t:Date.now(), p:+punct.toFixed(1), d:delay});
+  while (punctHist.length > 600) punctHist.shift();
+  renderWeek();
 }
-function renderSpark() {
-  const el = $('spark'); if (!el) return;
-  if (punctHist.length < 2) { el.innerHTML = '<div class="spark-empty">Se irá dibujando con los datos de los próximos minutos</div>'; return; }
-  const W = 320, H = 44, n = punctHist.length;
-  const pts = punctHist.map((h, i) => [i / (n - 1) * W, H - 4 - h.p / 100 * (H - 8)]);
-  const line = pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
-  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="Puntualidad en los últimos minutos">
-    <polygon points="0,${H} ${line} ${W},${H}" fill="rgba(34,197,94,.12)"/>
-    <polyline points="${line}" fill="none" stroke="#22c55e" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
-  </svg><div class="spark-ax"><span>${fmtHM(punctHist[0].t)}</span><span>${Math.round(punctHist[n - 1].p)}% ahora</span></div>`;
-}
-
 let toastTimer = null;
 function toast(msg) { const el = $('toast'); el.textContent = msg; el.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('on'), 2600); }
 
@@ -1870,6 +2170,8 @@ syncZoom();
 setMode('wait');
 if (settings.mode === 'sim') enterSim(); else pollLive();
 updateDashboard();
+loadDatos();
+setInterval(loadDatos, 5 * 60000);
 })();
 </script>
 </body>
