@@ -57,6 +57,7 @@ Renfe solo publica en tiempo real los trenes que ya circulan. Para ver también 
 
 - **Paneles de estación y búsqueda de viajes** con todos los trenes: *en circulación* (con su retraso), *programado*, *sin datos en directo* (debería circular, pero no tiene posición) o *afectado por corte*.
 - **Afectado por corte**: el horario oficial a veces mantiene trenes que no pueden circular. Si el recorrido de un tren atraviesa un tramo cortado según Adif, se muestra en gris.
+- **Trenes sin GPS**: si un tren del horario debería estar circulando pero Renfe no publica su posición, se dibuja sobre su vía en la posición que le toca por horario, con un anillo discontinuo y la indicación «sin GPS». Los que atraviesan un tramo cortado no se dibujan. Se pueden ocultar en los filtros.
 - **Todas las estaciones** del catálogo se pueden buscar por su nombre (Atocha, Chamartín, Sants, Santa Justa…). Las que tienen servicio aparecen en el mapa al acercarse.
 - Cercanías no está incluido: su horario oficial ocupa unos 290 MB.
 
