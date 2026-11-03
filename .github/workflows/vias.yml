@@ -1,0 +1,34 @@
+name: Trazado de vías (OpenStreetMap)
+
+# Descarga el trazado real de las vías desde OpenStreetMap y unas muestras GPS de los trenes,
+# y lo deja en la rama «osm» para regenerar src/geodata.json (node scripts/build-geodata.mjs).
+on:
+  workflow_dispatch:
+    inputs:
+      gps_min:
+        description: 'Minutos de muestras GPS de los trenes (0 = ninguna)'
+        default: '20'
+
+permissions:
+  contents: write
+
+jobs:
+  osm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Descargar vías y muestras GPS
+        run: node scripts/osm-vias.mjs out "${{ inputs.gps_min || '20' }}"
+      - name: Publicar en la rama osm
+        run: |
+          cd out
+          git init -q -b osm
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Vías de OpenStreetMap y muestras GPS"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" osm
