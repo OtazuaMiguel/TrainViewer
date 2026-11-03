@@ -1,7 +1,7 @@
 name: Trazado de vías (OpenStreetMap)
 
-# Descarga el trazado real de las vías desde OpenStreetMap y unas muestras GPS de los trenes,
-# y lo deja en la rama «osm» para regenerar src/geodata.json (node scripts/build-geodata.mjs).
+# Descarga el trazado real de las vías (extractos de OpenStreetMap de Geofabrik, filtrados con osmium) y unas
+# muestras GPS de los trenes, y lo deja en la rama «osm» para regenerar src/geodata.json (node scripts/build-geodata.mjs).
 on:
   workflow_dispatch:
     inputs:
@@ -15,14 +15,36 @@ permissions:
 jobs:
   osm:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - name: Descargar vías y muestras GPS
-        run: node scripts/osm-vias.mjs out "${{ inputs.gps_min || '20' }}"
+      - name: Instalar osmium
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq osmium-tool
+      - name: Extractos de OpenStreetMap (Geofabrik)
+        run: |
+          mkdir -p osm && cd osm
+          G=https://download.geofabrik.de/europe
+          get() { curl -fsSL --retry 4 --retry-delay 20 -o "$2.osm.pbf" "$1" && echo "descargado $2 ($(du -h "$2.osm.pbf" | cut -f1))"; }
+          get $G/spain-latest.osm.pbf es
+          get $G/portugal-latest.osm.pbf pt || echo "::warning::Portugal no disponible"
+          for r in languedoc-roussillon midi-pyrenees provence-alpes-cote-d-azur rhone-alpes aquitaine; do
+            get $G/france/$r-latest.osm.pbf fr-$r || echo "::warning::Francia ($r) no disponible"
+          done
+          for f in *.osm.pbf; do
+            n=${f%.osm.pbf}
+            osmium tags-filter -O "$f" w/railway=rail,narrow_gauge -o "$n.rail.pbf"
+            osmium export -O "$n.rail.pbf" -f geojsonseq --geometry-types=linestring -a id -o "$n.geojsonseq"
+            rm -f "$f"
+          done
+          ls -la
+      - name: Unir vías y tomar muestras GPS
+        run: |
+          args="todo:osm/es.geojsonseq"
+          for f in osm/pt.geojsonseq osm/fr-*.geojsonseq; do [ -f "$f" ] && args="$args principal:$f"; done
+          node scripts/osm-vias.mjs out "${{ inputs.gps_min || '20' }}" $args
       - name: Publicar en la rama osm
         run: |
           cd out

@@ -1,30 +1,52 @@
-// Descarga el trazado real de las vías de España desde OpenStreetMap (Overpass API) y, opcionalmente,
+// Descarga el trazado real de las vías desde OpenStreetMap (extractos de Geofabrik filtrados con osmium, o Overpass API) y, opcionalmente,
 // unas muestras de posiciones GPS de los trenes de Renfe para comprobar el ajuste.
 // Se ejecuta en GitHub Actions (flujo «vias.yml»); el resultado lo usa scripts/build-geodata.mjs.
-// Uso: node scripts/osm-vias.mjs <salida> [minutos de muestras GPS]
-import { mkdirSync, writeFileSync } from 'node:fs';
+// Uso: node scripts/osm-vias.mjs <salida> [minutos de muestras GPS] [todo:extracto.geojsonseq principal:otro.geojsonseq ...]
+import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 
 const OUT = process.argv[2] || 'osm-out';
 const GPS_MIN = +(process.argv[3] || 0);
+// Resto de argumentos: extractos ya filtrados con osmium (GeoJSON por líneas), como «todo:fichero» o «principal:fichero».
+// Sin ellos se consulta Overpass (más lento y a veces saturado).
+const FILES = process.argv.slice(4).map(a => { const [mode, ...f] = a.split(':'); return { mode, file: f.join(':') }; });
 mkdirSync(OUT, { recursive: true });
 const UA = 'TrainViewer/1.0 (+https://github.com/Paticuaker/TrainViewer)';
 const SERVERS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+const KEEP = ['railway', 'highspeed', 'usage', 'gauge', 'electrified', 'maxspeed', 'name', 'ref', 'tracks', 'tunnel', 'bridge'];
+const SKIP_USE = new Set(['industrial', 'military', 'tourism', 'test']);
+const pickTags = tags => { const t = {}; for (const k of KEEP) if (tags?.[k]) t[k] = tags[k]; return t; };
+const byId = new Map();
 
-// Vías en servicio de España (ancho normal, ibérico y vía estrecha), y líneas principales de Portugal y del sur de
-// Francia (trenes internacionales), sin apartaderos, playas de vías ni ramales de servicio.
-// Van en consultas separadas: una sola consulta con todo agota el tiempo de los servidores (HTTP 504).
-const HEAD = '[out:json][timeout:900][maxsize:1073741824];';
-const QUERIES = [
-  ['España', `${HEAD} area["ISO3166-1"="ES"][admin_level=2]->.a; way["railway"="rail"][!"service"](area.a); out tags geom;`],
-  ['España · vía estrecha', `${HEAD} area["ISO3166-1"="ES"][admin_level=2]->.a; way["railway"="narrow_gauge"][!"service"](area.a); out tags geom;`],
-  ['Portugal', `${HEAD} area["ISO3166-1"="PT"][admin_level=2]->.a; way["railway"="rail"][!"service"]["usage"="main"](area.a); out tags geom;`],
-  ['Sur de Francia', `${HEAD} way["railway"="rail"][!"service"]["usage"="main"](42.3,-2.0,46.0,6.0); out tags geom;`],
-];
-
+if (FILES.length) {
+  // Vías en servicio (sin apartaderos, playas de vías ni ramales de servicio); de Portugal y Francia sólo las principales
+  for (const { mode, file } of FILES) {
+    let n = 0;
+    for (const line of readFileSync(file, 'utf8').split('\n')) {
+      const s = line.replace(/^\x1e/, '').trim(); if (!s) continue;
+      let f; try { f = JSON.parse(s); } catch { continue; }
+      const p = f.properties || {}, g = f.geometry;
+      if (!g || g.type !== 'LineString' || p.service || !['rail', 'narrow_gauge'].includes(p.railway) || SKIP_USE.has(p.usage)) continue;
+      if (mode === 'principal' && (p.usage !== 'main' || p.railway !== 'rail')) continue;
+      const id = p['@id'] ?? f.id ?? (file + n);
+      byId.set(id, { id, t: pickTags(p), g: g.coordinates.map(([x, y]) => [+y.toFixed(6), +x.toFixed(6)]) });
+      n++;
+    }
+    console.log(`${file}: ${n} vías`);
+  }
+} else {
+  const HEAD = '[out:json][timeout:900][maxsize:1073741824];';
+  const QUERIES = [
+    ['España', `${HEAD} area["ISO3166-1"="ES"][admin_level=2]->.a; way["railway"~"^(rail|narrow_gauge)$"][!"service"](area.a); out tags geom;`],
+    ['Portugal', `${HEAD} area["ISO3166-1"="PT"][admin_level=2]->.a; way["railway"="rail"][!"service"]["usage"="main"](area.a); out tags geom;`],
+    ['Sur de Francia', `${HEAD} way["railway"="rail"][!"service"]["usage"="main"](42.3,-2.0,46.0,6.0); out tags geom;`],
+  ];
+  for (const [i, [name, q]] of QUERIES.entries()) for (const e of await overpass(name, q, i === 0))
+    if (e.type === 'way' && e.geometry?.length > 1 && !SKIP_USE.has(e.tags?.usage)) byId.set(e.id, { id: e.id, t: pickTags(e.tags), g: e.geometry.map(p => [+p.lat.toFixed(6), +p.lon.toFixed(6)]) });
+}
 async function overpass(name, q, required) {
-  for (let round = 0; round < 3; round++) for (const url of SERVERS) {
+  for (let round = 0; round < 2; round++) for (const url of SERVERS) {
     try {
       console.log(`Overpass (${name}):`, url);
       const r = await fetch(url, { method: 'POST', headers: { 'User-Agent': UA, 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -39,15 +61,8 @@ async function overpass(name, q, required) {
   console.log(`::warning::${name}: sin datos`);
   return [];
 }
-
-const byId = new Map();
-for (const [i, [name, q]] of QUERIES.entries()) for (const e of await overpass(name, q, i === 0)) byId.set(e.id, e);
-const j = { elements: [...byId.values()] };
-const KEEP = ['railway', 'highspeed', 'usage', 'gauge', 'electrified', 'maxspeed', 'name', 'ref', 'tracks', 'tunnel', 'bridge'];
-const ways = j.elements.filter(e => e.type === 'way' && e.geometry?.length > 1).map(e => {
-  const t = {}; for (const k of KEEP) if (e.tags?.[k]) t[k] = e.tags[k];
-  return { id: e.id, t, g: e.geometry.map(p => [+p.lat.toFixed(6), +p.lon.toFixed(6)]) };
-});
+const ways = [...byId.values()].filter(w => w.g.length > 1);
+if (ways.length < 5000) throw new Error('Demasiado pocas vías: ' + ways.length);
 writeFileSync(join(OUT, 'osm-rail.json.gz'), gzipSync(JSON.stringify({ generated: new Date().toISOString(), source: 'OpenStreetMap contributors (ODbL)', ways })));
 console.log(`osm-rail.json.gz: ${ways.length} vías, ${ways.reduce((s, w) => s + w.g.length, 0)} puntos`);
 
