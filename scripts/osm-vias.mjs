@@ -12,34 +12,37 @@ mkdirSync(OUT, { recursive: true });
 const UA = 'TrainViewer/1.0 (+https://github.com/Paticuaker/TrainViewer)';
 const SERVERS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
 
-// Vías en servicio de España, y líneas principales de Portugal y del sur de Francia (trenes internacionales),
-// sin apartaderos, playas de vías ni ramales de servicio
-const Q = `[out:json][timeout:900][maxsize:1073741824];
-area["ISO3166-1"="ES"][admin_level=2]->.es;
-area["ISO3166-1"="PT"][admin_level=2]->.pt;
-(
-  way["railway"~"^(rail|narrow_gauge)$"][!"service"](area.es);
-  way["railway"="rail"][!"service"]["usage"="main"](area.pt);
-  way["railway"="rail"][!"service"]["usage"="main"](42.3,-2.0,46.0,6.0);
-);
-out tags geom;`;
+// Vías en servicio de España (ancho normal, ibérico y vía estrecha), y líneas principales de Portugal y del sur de
+// Francia (trenes internacionales), sin apartaderos, playas de vías ni ramales de servicio.
+// Van en consultas separadas: una sola consulta con todo agota el tiempo de los servidores (HTTP 504).
+const HEAD = '[out:json][timeout:900][maxsize:1073741824];';
+const QUERIES = [
+  ['España', `${HEAD} area["ISO3166-1"="ES"][admin_level=2]->.a; way["railway"="rail"][!"service"](area.a); out tags geom;`],
+  ['España · vía estrecha', `${HEAD} area["ISO3166-1"="ES"][admin_level=2]->.a; way["railway"="narrow_gauge"][!"service"](area.a); out tags geom;`],
+  ['Portugal', `${HEAD} area["ISO3166-1"="PT"][admin_level=2]->.a; way["railway"="rail"][!"service"]["usage"="main"](area.a); out tags geom;`],
+  ['Sur de Francia', `${HEAD} way["railway"="rail"][!"service"]["usage"="main"](42.3,-2.0,46.0,6.0); out tags geom;`],
+];
 
-async function overpass() {
+async function overpass(name, q, required) {
   for (let round = 0; round < 3; round++) for (const url of SERVERS) {
     try {
-      console.log('Overpass:', url);
+      console.log(`Overpass (${name}):`, url);
       const r = await fetch(url, { method: 'POST', headers: { 'User-Agent': UA, 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'data=' + encodeURIComponent(Q), signal: AbortSignal.timeout(20 * 60000) });
+        body: 'data=' + encodeURIComponent(q), signal: AbortSignal.timeout(20 * 60000) });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const j = await r.json();
       if (!j.elements?.length) throw new Error('respuesta vacía');
-      return j;
+      return j.elements;
     } catch (e) { console.log('::warning::' + url + ': ' + e.message); await new Promise(r => setTimeout(r, 30000)); }
   }
-  throw new Error('Ningún servidor Overpass respondió');
+  if (required) throw new Error('Ningún servidor Overpass respondió (' + name + ')');
+  console.log(`::warning::${name}: sin datos`);
+  return [];
 }
 
-const j = await overpass();
+const byId = new Map();
+for (const [i, [name, q]] of QUERIES.entries()) for (const e of await overpass(name, q, i === 0)) byId.set(e.id, e);
+const j = { elements: [...byId.values()] };
 const KEEP = ['railway', 'highspeed', 'usage', 'gauge', 'electrified', 'maxspeed', 'name', 'ref', 'tracks', 'tunnel', 'bridge'];
 const ways = j.elements.filter(e => e.type === 'way' && e.geometry?.length > 1).map(e => {
   const t = {}; for (const k of KEEP) if (e.tags?.[k]) t[k] = e.tags[k];
