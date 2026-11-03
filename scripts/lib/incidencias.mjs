@@ -194,7 +194,9 @@ export function compile(items, today = new Date()) {
     out.items.push({ id: r.id, kind: r.kind, title: r.title, zones: r.zones, text: r.text, url: r.url, severity: r.severity, note: r.note,
                      edges: [...new Set(r.pieces.map(p => p.e.id))], unmatched: r.unmatched });
     for (const p of r.pieces) {
-      out.overlays.push({ item: r.id, sev: p.sev, edge: p.e.id, coords: sliceEdge(p.e, p.s0, p.s1) });
+      // f0/f1: posición relativa en el tramo, para que la app lo vuelva a situar sobre su propio trazado
+      out.overlays.push({ item: r.id, sev: p.sev, edge: p.e.id, f0: +(Math.min(p.s0, p.s1) / p.e.len).toFixed(4), f1: +(Math.max(p.s0, p.s1) / p.e.len).toFixed(4),
+                          coords: sliceEdge(p.e, p.s0, p.s1) });
       const frac = Math.abs(p.s1 - p.s0) / p.e.len, cur = out.edges[p.e.id];
       if (p.sev === 'plan') continue;
       if (!cur || rank[p.sev] > rank[cur.sev]) out.edges[p.e.id] = { sev: p.sev, frac: +frac.toFixed(2), item: r.id };

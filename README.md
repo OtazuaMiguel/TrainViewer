@@ -6,7 +6,7 @@ Mapa ferroviario de España en tiempo real: trenes de Alta Velocidad, Larga Dist
 
 ## Qué hace
 
-- **Mapa oscuro** con la red de vías principales (trazado de Natural Earth). El fondo es el mapa gris oscuro de Esri y, si falla, el del IGN (oscurecido). Ninguno de los dos necesita clave de API. Si no carga ninguno, se ve un mapa base integrado en la propia página.
+- **Mapa oscuro** con la red de vías dibujada sobre su trazado real (OpenStreetMap), ajustado a las posiciones GPS de los trenes. El fondo es el mapa gris oscuro de Esri y, si falla, el del IGN (oscurecido). Ninguno de los dos necesita clave de API. Si no carga ninguno, se ve un mapa base integrado en la propia página.
 - **Trenes en tiempo real** como puntos de color según el tipo, con una flecha que indica su sentido y movimiento continuo sobre la vía. Tienen borde naranja con ≥10 min de retraso y rojo si están detenidos fuera de estación. Al pulsar uno se abre su ficha en la barra lateral: velocidad, retraso, próxima parada y el recorrido completo con horas programadas y estimadas. Desde ahí se puede seguir el tren en el mapa o ver su recorrido entero.
 - **Estado de la vía con datos oficiales de Adif**: cada 15 min se leen «Estado de la red» y «Avisos» de Adif y se dibujan sobre el tramo exacto: rojo discontinuo para un corte, amarillo para una incidencia y punteado para un corte programado que hoy no aplica. Cada aviso enlaza a su fuente. En los tramos sin aviso oficial, el estado se deduce de los retrasos de los trenes que los recorren.
 - **Modo foco**: al seleccionar un tren, o buscar un viaje como «Madrid Sevilla», solo su trayecto queda en color, siguiendo las vías reales y con sus paradas; el resto del mapa pasa a blanco y negro.
@@ -86,11 +86,14 @@ index.html                 app final, autocontenida (generada)
 src/app.html               código fuente de la app (HTML + CSS + JS)
 src/geodata.json           vías, mapa base y catálogo de estaciones
 scripts/build.mjs          genera index.html a partir de src/
-scripts/build-geodata.mjs  regenera src/geodata.json desde Natural Earth y Renfe
+scripts/build-geodata.mjs  regenera src/geodata.json (vías de OpenStreetMap, fronteras de Natural Earth, estaciones de Renfe)
+scripts/osm-vias.mjs       descarga las vías de OpenStreetMap y muestras GPS (lo ejecuta el flujo «vias»)
+scripts/calibrar.mjs       mide la distancia entre las posiciones GPS de los trenes y las vías dibujadas
 tools/proxy-renfe.js       proxy CORS local opcional
 supabase/functions/renfe-proxy/index.ts  proxy desplegado en Supabase (fuente principal)
 supabase/functions/trigger-datos/index.ts lanza el flujo «datos» (lo llama pg_cron cada 15 min)
 .github/workflows/pages.yml  publica en GitHub Pages y refresca la copia de datos
+.github/workflows/vias.yml  descarga el trazado de OpenStreetMap a la rama `osm`
 .github/workflows/diagnostico.yml  abre la web publicada en Chromium y guarda capturas en la rama `diagnostico`
 ```
 
@@ -110,6 +113,14 @@ Para quitarlo: `select cron.unschedule('trainviewer-datos');` en el editor SQL d
 
 > GitHub desactiva los flujos programados de los repositorios públicos tras 60 días sin actividad. Si la copia de datos deja de actualizarse, reactívalo desde la pestaña **Actions**.
 
+## Trazado de las vías
+
+Las vías salen de OpenStreetMap. Las principales se trazan por la vía de su tipo, alta velocidad o ancho ibérico, entre las estaciones reales del catálogo de Renfe/Adif. El resto de líneas, incluida la vía estrecha del Cantábrico y las líneas principales de Portugal y del sur de Francia, se dibujan sin duplicar las vías dobles. Para actualizarlo:
+
+1. **Actions → Trazado de vías (OpenStreetMap) → Run workflow** (deja `osm-rail.json.gz` y `gps.json.gz` en la rama `osm`).
+2. `rm -f .cache/osm-rail.json.gz && node scripts/build-geodata.mjs && node scripts/build.mjs`
+3. Comprobación: `git show origin/osm:gps.json.gz > .cache/gps.json.gz && node scripts/calibrar.mjs .cache/gps.json.gz`
+
 ## Diagnóstico
 
 **Actions → Diagnóstico de la web → Run workflow** abre la web publicada en un navegador real. Registra qué responde cada proveedor de mapas y cada fuente de datos, y guarda capturas de escritorio y móvil en la rama `diagnostico`.
@@ -117,6 +128,7 @@ Para quitarlo: `select cron.unschedule('trainviewer-datos');` en el editor SQL d
 ## Créditos
 
 - Datos de trenes: visor público de tiempo real de Renfe. No es un proyecto oficial de Renfe ni de Adif.
-- Vías y fronteras: [Natural Earth](https://www.naturalearthdata.com/) (dominio público).
+- Vías: © [colaboradores de OpenStreetMap](https://www.openstreetmap.org/copyright) (ODbL).
+- Fronteras y mapa base integrado: [Natural Earth](https://www.naturalearthdata.com/) (dominio público).
 - Mapa de fondo: © Esri (World Dark Gray Base) y © [Instituto Geográfico Nacional](https://www.ign.es) (IGN Base).
 - Mapa: [Leaflet](https://leafletjs.com/).

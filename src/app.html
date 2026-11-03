@@ -910,12 +910,17 @@ function nearestOn(list, p) {
   }
   return best;
 }
-function snapToNetwork(p) {
-  const main = nearestOn(EDGES, p);
-  if (main && main.d < 3000) return main;
-  const sec = nearestOn(SEC, p);
-  if (sec && sec.d < 4000 && (!main || sec.d < main.d)) return sec;
-  return main;
+// Las vías siguen el trazado real (OpenStreetMap): se toma la más cercana, con preferencia ligera por la red
+// principal y algo de inercia por la vía en la que ya iba el tren (evita saltos entre vías paralelas o en los cruces).
+const SNAP_MAX = 2500;           // más lejos que esto, el tren se dibuja en su posición GPS
+function snapToNetwork(p, prevLine) {
+  const main = nearestOn(EDGES, p), sec = nearestOn(SEC, p);
+  let best = !sec || (main && main.d <= sec.d + 60) ? main : sec;
+  if (prevLine && best && best.e !== prevLine) {
+    const keep = nearestOn([prevLine], p);
+    if (keep && keep.d < 400 && keep.d <= best.d + 40) best = keep;
+  }
+  return best;
 }
 
 /* =====================================================================
@@ -924,6 +929,7 @@ function snapToNetwork(p) {
 const map = L.map('map', {zoomControl:false, minZoom:5, maxZoom:13, zoomSnap:0.5, maxBounds:[[33,-14],[47,8]], maxBoundsViscosity:0.8});
 map.fitBounds([[36.0,-9.3],[43.8,3.3]], {padding:[10,10]});
 L.control.zoom({position:'topright'}).addTo(map);
+map.attributionControl.addAttribution('Vías © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>');
 map.createPane('base').style.zIndex = 150;
 map.createPane('tracks').style.zIndex = 410;
 map.createPane('incid').style.zIndex = 415;
@@ -1136,7 +1142,8 @@ function buildRouteGraph() {
     for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const n of grid.get((a + i) + ':' + (b + j)) || []) { if (skip && skip.has(n)) continue; const d = hav(p, nodes[n]); if (d < bd) { bd = d; best = n; } }
     return best;
   };
-  for (const e of ends) { const skip = new Set([e, ...adj[e].map(x => x[0])]); const n = near(nodes[e], 2500, skip); if (n >= 0) link(e, n); }
+  // extremos sueltos: se unen a la vía más próxima (cruces y cortes entre trozos; con el trazado real basta un radio corto)
+  for (const e of ends) { const skip = new Set([e, ...adj[e].map(x => x[0])]); const n = near(nodes[e], 700, skip); if (n >= 0) link(e, n); }
   return {nodes, adj, near};
 }
 function graphPath(a, b) {        // A* entre dos nodos
@@ -1145,7 +1152,7 @@ function graphPath(a, b) {        // A* entre dos nodos
   const push = x => { open.push(x); let i = open.length - 1; while (i > 0) { const q = (i - 1) >> 1; if (open[q][0] <= open[i][0]) break; [open[q], open[i]] = [open[i], open[q]]; i = q; } };
   const pop = () => { const top = open[0], last = open.pop(); if (open.length) { open[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < open.length && open[l][0] < open[m][0]) m = l; if (r < open.length && open[r][0] < open[m][0]) m = r; if (m === i) break; [open[m], open[i]] = [open[i], open[m]]; i = m; } } return top; };
   let steps = 0;
-  while (open.length && steps++ < 60000) {
+  while (open.length && steps++ < 400000) {
     const [, u] = pop(); if (done.has(u)) continue; if (u === b) break; done.add(u);
     for (const [v, w] of adj[u]) { const nd = g.get(u) + w; if (nd < (g.get(v) ?? Infinity)) { g.set(v, nd); prev.set(v, u); push([nd + hav(nodes[v], goal), v]); } }
   }
@@ -1477,7 +1484,7 @@ function ingestFleet(list) {
       t = {id, number:id, src:'live', cat:prod.cat, label:prod.n, pos:gps, samples:[], speed:null, stillSince:live.feedTime || now, stillPos:gps, delay:0, held:false};
       trains.set(id, t);
       t.snap = snapToNetwork(gps);
-      t.pos = t.snap && t.snap.d < 6000 ? t.snap.pt : gps;
+      t.pos = t.snap && t.snap.d < SNAP_MAX ? t.snap.pt : gps;
       createMarker(t);
     }
     if (prod.cat !== t.cat) { groups[t.cat].removeLayer(t.marker); t.cat = prod.cat; groups[t.cat].addLayer(t.marker); }
@@ -1506,7 +1513,7 @@ function ingestFleet(list) {
     t.nearStation = nearestCatStation(gps).d < 1500;
     // Modelo de movimiento: posición sobre la vía + sentido + velocidad; entre lecturas se extrapola
     // en cada fotograma. La hora del GPS se refiere a la de la publicación para no depender del reloj local.
-    const snap = snapToNetwork(gps), onTrack = snap && snap.d < 6000;
+    const snap = snapToNetwork(gps, t.trk && t.trk.line), onTrack = snap && snap.d < SNAP_MAX;
     const fixClient = live.recvAt - Math.max(0, (live.feedTime || fixTime) - fixTime);
     const prevTrk = t.trk;
     if (onTrack) {
@@ -1543,7 +1550,7 @@ function ingestFleet(list) {
 // Estado de cada tramo deducido de los trenes reales que lo recorren
 function inferNetworkState(first) {
   for (const e of EDGES) e.liveTrains = [];
-  for (const t of trains.values()) if (t.snap && t.snap.d < 6000 && !t.snap.e.sec) t.snap.e.liveTrains.push(t);
+  for (const t of trains.values()) if (t.snap && t.snap.d < SNAP_MAX && !t.snap.e.sec) t.snap.e.liveTrains.push(t);
   for (const e of EDGES) {
     const ts = e.liveTrains;
     let status = 'ok', cause = null;
@@ -2439,8 +2446,27 @@ function officialHTML(it) {
     ${it.note ? `<div class="pp-foot">${esc(it.note)}</div>` : ''}
     <div class="pp-foot">Fuente oficial · actualizado ${official.updated ? fmtHM(Date.parse(official.updated)) : '—'} · <a href="${esc(it.url || 'https://www.adif.es/viajeros/estado-de-la-red')}" target="_blank" rel="noopener">ver en Adif</a></div></div>`;
 }
+// Trozo del trazado de un tramo entre dos distancias
+function edgeSlice(e, s0, s1) {
+  if (s0 > s1) [s0, s1] = [s1, s0];
+  const out = [pointAt(e, s0)];
+  for (let i = 0; i < e.geom.length; i++) if (e.cum[i] > s0 && e.cum[i] < s1) out.push(e.geom[i]);
+  out.push(pointAt(e, s1));
+  return out;
+}
 function applyOfficial(d) {
   official.updated = d.updated; official.items = d.items || []; official.overlays = d.overlays || []; official.edges = d.edges || {};
+  // Cada trozo se vuelve a dibujar sobre el trazado actual del tramo (los datos pueden venir de otra versión de las vías)
+  for (const o of official.overlays) {
+    const e = o.edge && EDGES.find(x => x.id === o.edge); if (!e) continue;
+    let s0 = null, s1 = null;
+    if (o.f0 != null && o.f1 != null) { s0 = o.f0 * e.len; s1 = o.f1 * e.len; }
+    else if (o.coords && o.coords.length > 1) {
+      const a = nearestOn([e], o.coords[0]), b = nearestOn([e], o.coords[o.coords.length - 1]);
+      if (a && b) { s0 = a.s; s1 = b.s; }
+    }
+    if (s0 !== null && Math.abs(s1 - s0) > 50) o.coords = edgeSlice(e, s0, s1);
+  }
   official.layer.clearLayers(); official.km = {cut:0, warn:0};
   const byId = new Map(official.items.map(i => [i.id, i]));
   for (const o of official.overlays) {
