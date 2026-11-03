@@ -100,6 +100,7 @@ const neEdges = {};
 
 // --- 1b. Trazado real de OpenStreetMap (rama «osm», generada por el flujo vias.yml). Si no está, se usa Natural Earth.
 const est = await getJSON('estaciones.geojson', STATION_SOURCES);
+const C0 = await getJSON('ne_10m_admin_0_countries.geojson', NE + 'ne_10m_admin_0_countries.geojson');
 let osm = null;
 try {
   const f = join(cache, 'osm-rail.json.gz');
@@ -127,7 +128,11 @@ function fromOSM(osm) {
     return { hs, ib, nar, hsTag };
   };
   const skipUse = new Set(['industrial', 'military', 'tourism', 'test']);
-  const ways = osm.ways.filter(w => !skipUse.has(w.t.usage)).map(w => ({ ...w, c: cls(w.t) }));
+  // En Francia sólo interesa el corredor de los trenes de Renfe (Perpiñán – Montpellier – Marsella / Lyon)
+  const FR = (C0.features.find(f => f.properties.ADM0_A3 === 'FRA')?.geometry.coordinates || []).map(p => p[0]);
+  const inRing = ([la, lo], ring) => { let c = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const [xi, yi] = ring[i], [xj, yj] = ring[j]; if ((yi > la) !== (yj > la) && lo < (xj - xi) * (la - yi) / (yj - yi) + xi) c = !c; } return c; };
+  const inFrance = p => p[0] > 42.3 && FR.some(r => inRing(p, r));
+  const ways = osm.ways.filter(w => !skipUse.has(w.t.usage)).filter(w => { const m = w.g[w.g.length >> 1]; return !(m[1] < 2.6 && inFrance(m)); }).map(w => ({ ...w, c: cls(w.t) }));
   const key = p => p[0].toFixed(6) + ',' + p[1].toFixed(6);
   const idx = new Map(), N = [], A = [], NC = [];   // nodos, adyacencia [vecino, metros, clase], clases que pasan por el nodo
   const nid = p => { const k = key(p); let i = idx.get(k); if (i === undefined) { i = N.length; idx.set(k, i); N.push(p); A.push([]); NC.push({ hs: false, ib: false, nar: false, hsTag: false }); } return i; };
@@ -213,6 +218,29 @@ function fromOSM(osm) {
     return { path, len: real[end], cost: g[end] };
   }
 
+  // Bifurcaciones (j:1): el ancla es el punto real donde se separan las vías, que se busca como el último nodo
+  // común de los caminos desde la estación anterior hacia cada una de las ramas
+  for (const k in ST) if (ST[k].j) {
+    const nb = [], type = LINES.find(L => L.path.includes(k))?.type || 'av';
+    for (const L of LINES) { const i = L.path.indexOf(k); if (i > 0) nb.push(L.path[i - 1]); if (i >= 0 && i < L.path.length - 1) nb.push(L.path[i + 1]); }
+    const [trunk, ...branches] = [...new Set(nb)];
+    const T0 = anchor(trunk, type), paths = branches.map(b => { const B = anchor(b, type); return B && T0 ? astar(T0.n, B.n, type) : null; }).filter(Boolean);
+    if (paths.length < 2) continue;
+    // las vías dobles van por separado en OSM: se busca el primer punto en que las ramas se alejan más de 150 m
+    const distTo = (p, line) => { let b = Infinity; const kx = Math.cos(p[0] * R);
+      for (let i = 0; i < line.length - 1; i++) { const ax = line[i][1] * kx, ay = line[i][0], bx = line[i + 1][1] * kx, by = line[i + 1][0], px = p[1] * kx, py = p[0];
+        const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy, t = L2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / L2)) : 0;
+        b = Math.min(b, Math.hypot(px - ax - t * dx, py - ay - t * dy) * 111195); }
+      return b; };
+    const A0p = paths[0].path, others = paths.slice(1).map(p => p.path);
+    let at = -1;
+    for (let i = 0; i < A0p.length; i++) if (others.some(o => distTo(A0p[i], o) > 150)) { at = Math.max(0, i - 1); break; }
+    if (at < 0) continue;
+    const pt = A0p[at], n = idx.get(key(pt));
+    if (n === undefined) continue;
+    anchorCache[k + type] = { n, d: hav(pt, ST[k].c), sc: 0, p: null };
+    console.log(`bifurcación ${k}: ${pt[0].toFixed(4)}, ${pt[1].toFixed(4)} (a ${(hav(pt, ST[k].c) / 1000).toFixed(1)} km de la posición anterior)`);
+  }
   const edges = {}, report = [];
   for (const L of LINES) for (let i = 0; i < L.path.length - 1; i++) {
     const a = L.path[i], b = L.path[i + 1], id = a + '-' + b, direct = hav(ST[a].c, ST[b].c);
