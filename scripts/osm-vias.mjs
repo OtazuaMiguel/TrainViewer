@@ -12,10 +12,16 @@ mkdirSync(OUT, { recursive: true });
 const UA = 'TrainViewer/1.0 (+https://github.com/Paticuaker/TrainViewer)';
 const SERVERS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
 
-// Vías en servicio de la península (sin apartaderos, playas de vías ni ramales de servicio)
+// Vías en servicio de España, y líneas principales de Portugal y del sur de Francia (trenes internacionales),
+// sin apartaderos, playas de vías ni ramales de servicio
 const Q = `[out:json][timeout:900][maxsize:1073741824];
 area["ISO3166-1"="ES"][admin_level=2]->.es;
-way["railway"="rail"][!"service"](area.es);
+area["ISO3166-1"="PT"][admin_level=2]->.pt;
+(
+  way["railway"~"^(rail|narrow_gauge)$"][!"service"](area.es);
+  way["railway"="rail"][!"service"]["usage"="main"](area.pt);
+  way["railway"="rail"][!"service"]["usage"="main"](42.3,-2.0,46.0,6.0);
+);
 out tags geom;`;
 
 async function overpass() {
@@ -34,7 +40,7 @@ async function overpass() {
 }
 
 const j = await overpass();
-const KEEP = ['highspeed', 'usage', 'gauge', 'electrified', 'maxspeed', 'name', 'ref', 'tracks', 'tunnel', 'bridge'];
+const KEEP = ['railway', 'highspeed', 'usage', 'gauge', 'electrified', 'maxspeed', 'name', 'ref', 'tracks', 'tunnel', 'bridge'];
 const ways = j.elements.filter(e => e.type === 'way' && e.geometry?.length > 1).map(e => {
   const t = {}; for (const k of KEEP) if (e.tags?.[k]) t[k] = e.tags[k];
   return { id: e.id, t, g: e.geometry.map(p => [+p.lat.toFixed(6), +p.lon.toFixed(6)]) };
