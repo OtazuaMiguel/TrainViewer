@@ -89,6 +89,7 @@ scripts/build.mjs          genera index.html a partir de src/
 scripts/build-geodata.mjs  regenera src/geodata.json desde Natural Earth y Renfe
 tools/proxy-renfe.js       proxy CORS local opcional
 supabase/functions/renfe-proxy/index.ts  proxy desplegado en Supabase (fuente principal)
+supabase/functions/trigger-datos/index.ts lanza el flujo «datos» (lo llama pg_cron cada 15 min)
 .github/workflows/pages.yml  publica en GitHub Pages y refresca la copia de datos
 .github/workflows/diagnostico.yml  abre la web publicada en Chromium y guarda capturas en la rama `diagnostico`
 ```
@@ -102,6 +103,10 @@ Después de editar `src/app.html`, ejecuta `node scripts/build.mjs` para actuali
 **Web.**
 
 La web se publica con GitHub Pages mediante GitHub Actions: **Settings → Pages → Source: GitHub Actions**. Cada push a `main`, cada ~10 minutos y cada ejecución manual (**Actions → Publicar web → Run workflow**) generan y publican la web.
+
+**Programador de respaldo (Supabase).** El programador de GitHub lanza las ejecuciones con mucho retraso, así que en EuskaGo hay una tarea `pg_cron` llamada `trainviewer-datos`. Se ejecuta a los minutos 02, 17, 32 y 47 de cada hora y llama a la Edge Function `trigger-datos` (`supabase/functions/trigger-datos`), que lanza el flujo `datos` en GitHub si no hay uno en curso o de hace menos de 12 min. Necesita el secreto `GITHUB_TOKEN` en Supabase (Edge Functions → Secrets): un token de grano fino con acceso solo a este repositorio y permiso «Actions: Read and write». Cuando el token caduque, basta con crear otro y sustituir el secreto.
+
+Para quitarlo: `select cron.unschedule('trainviewer-datos');` en el editor SQL de Supabase y borrar la función `trigger-datos`.
 
 > GitHub desactiva los flujos programados de los repositorios públicos tras 60 días sin actividad. Si la copia de datos deja de actualizarse, reactívalo desde la pestaña **Actions**.
 
