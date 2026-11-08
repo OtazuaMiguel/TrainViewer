@@ -1,9 +1,9 @@
 // trigger-datos — lo llama pg_cron cada 15 min. Pide a GitHub que ejecute el flujo «datos»
 // (histórico, incidencias de Adif y horario) del repositorio TrainViewer, porque el programador
 // de GitHub lanza las ejecuciones programadas con mucho retraso.
-// Necesita el secreto GITHUB_TOKEN: token de grano fino con acceso sólo a Paticuaker/TrainViewer
+// Necesita el secreto GITHUB_TOKEN: token de grano fino con acceso sólo a OtazuaMiguel/TrainViewer
 // y permiso «Actions: Read and write».
-const REPO = "Paticuaker/TrainViewer";
+const REPO = "OtazuaMiguel/TrainViewer";
 const WORKFLOW = "datos.yml";
 const MIN_GAP_MS = 12 * 60 * 1000;   // si GitHub ya lo ejecutó hace poco, no se duplica
 

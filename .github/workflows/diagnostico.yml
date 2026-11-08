@@ -30,7 +30,7 @@ jobs:
             "https://www.ign.es/wmts/ign-base?layer=IGNBaseOrto&style=default&tilematrixset=GoogleMapsCompatible&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image/png&TileMatrix=7&TileCol=62&TileRow=48" \
             "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/7/48/62" \
             "https://basemap.nationalmap.gov/arcgis/rest/services/USGSShadedReliefOnly/MapServer/tile/6/24/31" ; do
-            n=$((n+1)); out=$(curl -s -o /tmp/t -w '%{http_code} %{content_type} %{size_download}' -m 20 -e "https://paticuaker.github.io/" -A "Mozilla/5.0" "$u")
+            n=$((n+1)); out=$(curl -s -o /tmp/t -w '%{http_code} %{content_type} %{size_download}' -m 20 -e "https://otazuamiguel.github.io/" -A "Mozilla/5.0" "$u")
             body=""; case "$out" in *image*) ;; *) body=" cuerpo=$(head -c 160 /tmp/t | tr '\n' ' ')";; esac
             echo "$out $u$body"; mkdir -p diag/tiles; cp /tmp/t "diag/tiles/$n.img"
           done

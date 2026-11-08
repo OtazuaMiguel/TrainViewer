@@ -105,7 +105,7 @@ let osm = null;
 try {
   const f = join(cache, 'osm-rail.json.gz');
   if (!existsSync(f)) {
-    const r = await fetch('https://raw.githubusercontent.com/Paticuaker/TrainViewer/osm/osm-rail.json.gz');
+    const r = await fetch('https://raw.githubusercontent.com/OtazuaMiguel/TrainViewer/osm/osm-rail.json.gz');
     if (!r.ok) throw new Error('HTTP ' + r.status);
     writeFileSync(f, Buffer.from(await r.arrayBuffer()));
   }

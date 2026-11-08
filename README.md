@@ -2,7 +2,7 @@
 
 Mapa ferroviario de España en tiempo real: trenes de Alta Velocidad, Larga Distancia y Media Distancia sobre la red, estado de los tramos y paneles de llegadas y salidas por estación.
 
-**Web:** https://paticuaker.github.io/TrainViewer/
+**Web:** https://otazuamiguel.github.io/TrainViewer/
 
 ## Qué hace
 

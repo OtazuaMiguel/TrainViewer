@@ -37,7 +37,7 @@ function refresh(key: string): Promise<Entry> {
   let p = inflight.get(key);
   if (!p) {
     p = fetch(BASE + SOURCES[key].file, {
-      headers: { "User-Agent": "TrainViewer (+https://github.com/Paticuaker/TrainViewer)", Accept: "application/json" },
+      headers: { "User-Agent": "TrainViewer (+https://github.com/OtazuaMiguel/TrainViewer)", Accept: "application/json" },
       signal: AbortSignal.timeout(10_000),
     })
       .then(async (r) => {

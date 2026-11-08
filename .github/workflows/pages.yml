@@ -39,7 +39,7 @@ jobs:
         run: |
           for f in flotaLD.json trenesConEstacionesLD.json; do
             if curl -fsSL --retry 4 --retry-all-errors --retry-delay 3 --max-time 40 \
-                 -A "Mozilla/5.0 (TrainViewer; +https://github.com/Paticuaker/TrainViewer)" \
+                 -A "Mozilla/5.0 (TrainViewer; +https://github.com/OtazuaMiguel/TrainViewer)" \
                  -o "_site/data/$f" "https://tiempo-real.largorecorrido.renfe.com/renfe-visor/$f"; then
               echo "Descargado $f ($(wc -c < "_site/data/$f") bytes)"
             else

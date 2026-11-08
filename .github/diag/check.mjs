@@ -2,7 +2,7 @@
 import { chromium } from 'playwright';
 import { mkdirSync, writeFileSync } from 'node:fs';
 mkdirSync('diag', { recursive: true });
-const URL = process.env.SITE || 'https://paticuaker.github.io/TrainViewer/';
+const URL = process.env.SITE || 'https://otazuamiguel.github.io/TrainViewer/';
 const log = [];
 const b = await chromium.launch();
 for (const [name, vp] of [['escritorio', { width: 1440, height: 900 }], ['movil', { width: 390, height: 844 }]]) {

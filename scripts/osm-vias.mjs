@@ -12,7 +12,7 @@ const GPS_MIN = +(process.argv[3] || 0);
 // Sin ellos se consulta Overpass (más lento y a veces saturado).
 const FILES = process.argv.slice(4).map(a => { const [mode, ...f] = a.split(':'); return { mode, file: f.join(':') }; });
 mkdirSync(OUT, { recursive: true });
-const UA = 'TrainViewer/1.0 (+https://github.com/Paticuaker/TrainViewer)';
+const UA = 'TrainViewer/1.0 (+https://github.com/OtazuaMiguel/TrainViewer)';
 const SERVERS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
 const KEEP = ['railway', 'highspeed', 'usage', 'gauge', 'electrified', 'maxspeed', 'name', 'ref', 'tracks', 'tunnel', 'bridge'];
 const SKIP_USE = new Set(['industrial', 'military', 'tourism', 'test']);
